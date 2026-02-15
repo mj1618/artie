@@ -128,3 +128,25 @@ export const removeRepo = mutation({
     await ctx.db.delete("repos", args.repoId);
   },
 });
+
+export const hasAnyRepos = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return false;
+    // Get all teams the user is on
+    const memberships = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    // Check if any team has at least one repo (exit early on first found)
+    for (const m of memberships) {
+      const repo = await ctx.db
+        .query("repos")
+        .withIndex("by_teamId", (q) => q.eq("teamId", m.teamId))
+        .first();
+      if (repo) return true;
+    }
+    return false;
+  },
+});
