@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,16 +23,77 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "./builds/webcontainer-preview/types/**/*.ts",
+    "./builds/webcontainer-preview/dev/types/**/*.ts",
+    "./builds/ai-file-editing/types/**/*.ts",
+    "./builds/ai-file-editing/dev/types/**/*.ts",
+    "./builds/github-commit-flow/types/**/*.ts",
+    "./builds/github-commit-flow/dev/types/**/*.ts",
+    "./builds/change-review-ui/types/**/*.ts",
+    "./builds/change-review-ui/dev/types/**/*.ts",
+    "./builds/sidebar-build/types/**/*.ts",
+    "./builds/sidebar-build/dev/types/**/*.ts",
+    "./builds/review-check/types/**/*.ts",
+    "./builds/review-check/dev/types/**/*.ts",
+    "./builds/review-check-iter4/types/**/*.ts",
+    "./builds/review-check-iter4/dev/types/**/*.ts",
+    "./builds/session-picker-build/types/**/*.ts",
+    "./builds/session-picker-build/dev/types/**/*.ts",
+    "./builds/error-boundaries/types/**/*.ts",
+    "./builds/error-boundaries/dev/types/**/*.ts",
+    "./builds/toast-build/types/**/*.ts",
+    "./builds/toast-build/dev/types/**/*.ts",
+    "./builds/skeleton-test/types/**/*.ts",
+    "./builds/skeleton-test/dev/types/**/*.ts",
+    "./builds/typing-indicator/types/**/*.ts",
+    "./builds/typing-indicator/dev/types/**/*.ts",
+    "./builds/confirm-dialog-build/types/**/*.ts",
+    "./builds/confirm-dialog-build/dev/types/**/*.ts",
+    "./builds/file-explorer-test/types/**/*.ts",
+    "./builds/file-explorer-test/dev/types/**/*.ts",
+    "./builds/preview-navbar-test/types/**/*.ts",
+    "./builds/preview-navbar-test/dev/types/**/*.ts",
+    "./builds/chat-textarea-test/types/**/*.ts",
+    "./builds/chat-textarea-test/dev/types/**/*.ts",
+    "./builds/markdown-chat/types/**/*.ts",
+    "./builds/markdown-chat/dev/types/**/*.ts",
+    "./builds/diff-view-build/types/**/*.ts",
+    "./builds/diff-view-build/dev/types/**/*.ts",
+    "./builds/mobile-responsive/types/**/*.ts",
+    "./builds/mobile-responsive/dev/types/**/*.ts",
+    "./builds/streaming-test/types/**/*.ts",
+    "./builds/streaming-test/dev/types/**/*.ts",
+    "./builds/ai-context-edits/types/**/*.ts",
+    "./builds/ai-context-edits/dev/types/**/*.ts",
+    "./builds/syntax-highlight-test/types/**/*.ts",
+    "./builds/syntax-highlight-test/dev/types/**/*.ts",
+    "./builds/session-delete-rename/types/**/*.ts",
+    "./builds/session-delete-rename/dev/types/**/*.ts",
+    "./builds/refresh-github-test/types/**/*.ts",
+    "./builds/refresh-github-test/dev/types/**/*.ts",
+    "./builds/copy-btn-test/types/**/*.ts",
+    "./builds/copy-btn-test/dev/types/**/*.ts",
+    "./builds/github-oauth-build/types/**/*.ts",
+    "./builds/github-oauth-build/dev/types/**/*.ts",
+    "./builds/github-oauth-test/types/**/*.ts",
+    "./builds/github-oauth-test/dev/types/**/*.ts",
+    "./builds/github-repo-browser/types/**/*.ts",
+    "./builds/github-repo-browser/dev/types/**/*.ts",
+    "./builds/fix-ai-tokens/types/**/*.ts",
+    "./builds/fix-ai-tokens/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "builds"
+  ]
 }

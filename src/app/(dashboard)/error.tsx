@@ -1,0 +1,48 @@
+"use client";
+
+import Link from "next/link";
+
+export default function DashboardError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-20">
+      <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-amber-900/30">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className="h-7 w-7 text-amber-400"
+        >
+          <path
+            fillRule="evenodd"
+            d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold text-zinc-100">Something went wrong</h2>
+      <p className="mt-2 max-w-md text-center text-sm text-zinc-400">
+        {error.message || "An unexpected error occurred."}
+      </p>
+      <div className="mt-6 flex items-center gap-4">
+        <button
+          onClick={reset}
+          className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+        >
+          Try again
+        </button>
+        <Link
+          href="/home"
+          className="text-sm text-zinc-400 hover:text-white"
+        >
+          Go to dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}

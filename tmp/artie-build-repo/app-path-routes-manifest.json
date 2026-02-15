@@ -1,0 +1,10 @@
+{
+  "/(auth)/login/page": "/login",
+  "/(auth)/signup/page": "/signup",
+  "/(dashboard)/page": "/",
+  "/(dashboard)/team/[teamId]/page": "/team/[teamId]",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/workspace/[repoId]/page": "/workspace/[repoId]"
+}

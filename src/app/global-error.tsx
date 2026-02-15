@@ -1,0 +1,50 @@
+"use client";
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <html>
+      <body className="bg-zinc-950 text-white">
+        <div className="flex min-h-screen flex-col items-center justify-center px-6">
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-red-900/30">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-7 w-7 text-red-400"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold">Something went wrong</h1>
+          <p className="mt-2 max-w-md text-center text-sm text-zinc-400">
+            {error.message || "An unexpected error occurred."}
+          </p>
+          <div className="mt-6 flex items-center gap-4">
+            <button
+              onClick={reset}
+              className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+            >
+              Try again
+            </button>
+            <a
+              href="/"
+              className="text-sm text-zinc-400 hover:text-white"
+            >
+              Go home
+            </a>
+          </div>
+        </div>
+      </body>
+    </html>
+  );
+}

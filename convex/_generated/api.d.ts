@@ -8,7 +8,16 @@
  * @module
  */
 
-import type * as tasks from "../tasks.js";
+import type * as ai from "../ai.js";
+import type * as auth from "../auth.js";
+import type * as fileChanges from "../fileChanges.js";
+import type * as github from "../github.js";
+import type * as http from "../http.js";
+import type * as messages from "../messages.js";
+import type * as projects from "../projects.js";
+import type * as sessions from "../sessions.js";
+import type * as teams from "../teams.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +26,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  tasks: typeof tasks;
+  ai: typeof ai;
+  auth: typeof auth;
+  fileChanges: typeof fileChanges;
+  github: typeof github;
+  http: typeof http;
+  messages: typeof messages;
+  projects: typeof projects;
+  sessions: typeof sessions;
+  teams: typeof teams;
+  users: typeof users;
 }>;
 
 /**

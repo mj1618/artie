@@ -93,6 +93,31 @@ Artie is a web application that allows non-technical users to preview and modify
   - **PR mode**: Create branch, commit, open PR with AI-generated description
 - Handle merge conflicts gracefully (notify user, offer to pull latest)
 
+### 7. Custom LLM Provider
+
+Owners can configure their own LLM API keys instead of using the platform's default:
+
+- **Supported Providers**:
+  - **OpenAI** (ChatGPT / GPT-4)
+  - **Anthropic** (Claude)
+  - **Google** (Gemini)
+- Owner enters API key in team settings
+- Keys are encrypted and stored securely (never exposed to frontend)
+- Per-team configuration allows different teams to use different providers
+- Fallback to platform default if no custom key configured
+- Usage tracking per team for billing/monitoring purposes
+
+### 8. Convex Backend Support (WebContainers)
+
+When a connected repository uses Convex, Artie runs a local Convex instance inside the WebContainer:
+
+- **Auto-detection**: Check for `convex/` directory or `convex.json` in repo
+- **Local Dev Instance**: Spin up `npx convex dev` within WebContainer
+- **Full-stack Preview**: Frontend connects to local Convex backend
+- **Schema & Functions**: AI can modify Convex schema, queries, mutations, and actions
+- **Data Seeding**: Option to seed test data for previews
+- Enables non-technical users to build and modify full-stack applications
+
 ---
 
 ## Data Model (Convex Schema)
@@ -113,6 +138,10 @@ teams: {
   name: string,
   ownerId: Id<"users">,
   createdAt: number,
+  // Custom LLM configuration (optional)
+  llmProvider?: "openai" | "anthropic" | "google",
+  llmApiKey?: string,  // encrypted
+  llmModel?: string,   // e.g., "gpt-4", "claude-3-opus", "gemini-pro"
 }
 
 // team memberships
@@ -143,6 +172,9 @@ repos: {
   pushStrategy: "direct" | "pr",
   connectedBy: Id<"users">,
   connectedAt: number,
+  // Auto-detected features
+  hasConvex?: boolean,      // true if convex/ directory detected
+  projectType?: string,     // "next", "vite", "cra", etc.
 }
 
 // chat sessions (for history/context)
@@ -188,8 +220,10 @@ artie/
 │   │   │   └── page.tsx      # Team management
 │   │   ├── repos/
 │   │   │   └── page.tsx      # Connect/manage repos
-│   │   └── settings/
-│   │       └── page.tsx      # Account settings
+│   │   ├── settings/
+│   │   │   └── page.tsx      # Account settings
+│   │   └── llm-settings/
+│   │       └── page.tsx      # Custom LLM provider config (owner only)
 │   └── (workspace)/
 │       └── [repoId]/
 │           └── page.tsx      # Main workspace (chat + preview)
@@ -222,10 +256,18 @@ artie/
 │   ├── messages.ts           # Chat messages
 │   └── actions/
 │       ├── github.ts         # GitHub API actions
-│       └── llm.ts            # LLM API actions
+│       └── llm/
+│           ├── index.ts      # LLM router (selects provider)
+│           ├── openai.ts     # OpenAI/ChatGPT integration
+│           ├── anthropic.ts  # Anthropic/Claude integration
+│           └── google.ts     # Google/Gemini integration
 ├── lib/
-│   ├── webcontainer.ts       # WebContainer utilities
+│   ├── webcontainer/
+│   │   ├── index.ts          # WebContainer utilities
+│   │   ├── convex.ts         # Convex local dev setup
+│   │   └── detect.ts         # Project type detection
 │   ├── github.ts             # GitHub helpers
+│   ├── llm-providers.ts      # LLM provider abstractions
 │   └── utils.ts              # General utilities
 ├── public/
 ├── tailwind.config.ts
@@ -302,14 +344,19 @@ artie/
 
 - [ ] WebContainer initialization
 - [ ] File system loading from GitHub
+- [ ] Project type detection (Next.js, Vite, CRA, etc.)
 - [ ] Dev server detection and startup
 - [ ] Preview iframe with proper headers
 - [ ] Build status and error display
+- [ ] Convex detection and local instance setup
+- [ ] Convex dev server integration (`npx convex dev`)
 
 ### Phase 4: AI Chat Interface
 
 - [ ] Chat UI components
 - [ ] Vercel AI SDK integration
+- [ ] Multi-provider support (OpenAI, Anthropic, Google)
+- [ ] Custom API key configuration UI (owner settings)
 - [ ] LLM context preparation (file tree, relevant code)
 - [ ] Streaming responses
 - [ ] Change detection and preview
@@ -368,6 +415,76 @@ const nextConfig = {
 - Track which files the AI has "seen" in the session
 - Summarize large files or use chunking strategies
 
+### Custom LLM Provider Support
+
+Multi-provider architecture using Vercel AI SDK's unified interface:
+
+```typescript
+// lib/llm-providers.ts
+import { openai } from "@ai-sdk/openai";
+import { anthropic } from "@ai-sdk/anthropic";
+import { google } from "@ai-sdk/google";
+
+export function getProvider(team: Team) {
+  if (!team.llmProvider || !team.llmApiKey) {
+    // Fall back to platform default (Anthropic)
+    return anthropic("claude-sonnet-4-20250514");
+  }
+
+  switch (team.llmProvider) {
+    case "openai":
+      return openai(team.llmModel || "gpt-4", {
+        apiKey: decrypt(team.llmApiKey),
+      });
+    case "anthropic":
+      return anthropic(team.llmModel || "claude-sonnet-4-20250514", {
+        apiKey: decrypt(team.llmApiKey),
+      });
+    case "google":
+      return google(team.llmModel || "gemini-pro", {
+        apiKey: decrypt(team.llmApiKey),
+      });
+  }
+}
+```
+
+**Security considerations**:
+- API keys are encrypted at rest using AES-256
+- Keys are decrypted only server-side in Convex actions
+- Key validation on save (test API call to verify key works)
+- Owners can rotate/delete keys at any time
+
+### Convex in WebContainers
+
+Running local Convex inside WebContainers for full-stack development:
+
+```typescript
+// lib/webcontainer/convex.ts
+export async function setupConvexDev(container: WebContainer) {
+  // Check if Convex is present
+  const hasConvex = await container.fs.readdir("/convex").catch(() => null);
+  if (!hasConvex) return null;
+
+  // Install Convex CLI
+  await container.spawn("npm", ["install", "convex"]);
+
+  // Start local Convex dev server
+  const process = await container.spawn("npx", ["convex", "dev", "--once"]);
+
+  // Return the local Convex URL for frontend to connect
+  return {
+    url: "http://localhost:3210", // Local Convex dev port
+    process,
+  };
+}
+```
+
+**Considerations**:
+- WebContainers have limited resources; Convex dev may need optimization
+- Test data seeding for realistic previews
+- AI understands Convex patterns (schema, validators, queries, mutations)
+- Handle Convex-specific errors gracefully in preview
+
 ### Rate Limiting
 
 - Implement rate limiting on LLM calls per user
@@ -387,12 +504,17 @@ NEXT_PUBLIC_CONVEX_URL=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 
-# LLM
+# Default LLM (platform fallback when no custom key)
 ANTHROPIC_API_KEY=
+
+# Encryption key for storing user API keys
+API_KEY_ENCRYPTION_SECRET=
 
 # Optional
 NEXT_PUBLIC_APP_URL=
 ```
+
+Note: Individual team LLM API keys (OpenAI, Anthropic, Google) are stored encrypted in the database, not as environment variables.
 
 ---
 
@@ -407,9 +529,23 @@ NEXT_PUBLIC_APP_URL=
 
 ## Future Enhancements
 
-- Multiple LLM provider support (OpenAI, Google, etc.)
 - Project templates for quick starts
 - Version history / rollback
 - Collaborative editing (multiple users same session)
 - Custom domain previews
 - Deployment integration (Vercel, Netlify)
+- Additional LLM providers (Mistral, Cohere, local models via Ollama)
+- Convex cloud deployment from preview (promote local to production)
+- Usage analytics and cost tracking for custom LLM keys
+
+---
+
+## Example Projects
+
+Reference repositories demonstrating supported project types:
+
+| Project | URL | Description |
+|---------|-----|-------------|
+| Next.js + Convex | [github.com/get-convex/convex-nextjs-template](https://github.com/get-convex/convex-nextjs-template) | Full-stack template with authentication |
+| Vite + React | [github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) | Modern React SPA |
+| Next.js Basic | [github.com/vercel/next.js/tree/canary/examples/hello-world](https://github.com/vercel/next.js/tree/canary/examples/hello-world) | Minimal Next.js setup |

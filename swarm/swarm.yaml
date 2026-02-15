@@ -1,139 +1,54 @@
 version: "1"
 tasks:
   planner:
+    concurrency: 1
     prompt-string: |
       # Planner — Artie Web Application
 
-      You are the planner for Artie, a web application that lets non-technical users preview and modify web applications using natural language. Your job is to decide what single task should be done next to move the project forward.
+      You decide what single task should be done next to build Artie.
 
-      ## Step 1: Read the Project Plan
+      ## Step 1: Understand Current State
 
-      Read `swarm/PLAN.md` to understand the full project plan, including milestones, architecture, and detailed requirements.
+      - Read `swarm/PLAN.md` for the project plan and milestones
+      - Check `swarm/done/` for completed `.done.md` files — don't repeat work
+      - Browse `src/` and `convex/` to see what's built
 
-      ## Step 2: Review Current Project State
+      ## Step 2: Write the Next Task
 
-      Examine the current state of the codebase:
-      - List all files in `src/` to see what components and pages exist
-      - Read key files like `package.json`, `convex/schema.ts`, `convex/tasks.ts`, `src/app/layout.tsx`, `src/app/page.tsx`
-      - Check `src/components/` for any components that have been built
-      - Check `convex/` for backend functions that exist
-      - Understand what has already been implemented vs. what still needs to be done
+      Create `{YYYY-MM-DD-HH-MM-SS}-{taskName}.todo.md` in `swarm/todos/`.
 
-      ## Step 3: Review Completed Work
-
-      Check the `swarm/done/` directory for `.done.md` files. Read each one to understand:
-      - What tasks have already been completed
-      - What was accomplished in each task
-      - Any issues or follow-ups noted
-
-      This is CRITICAL — you must not assign work that has already been done.
-
-      ## Step 4: Check for In-Progress Work
-
-      Look in SWARM_STATE_DIR for any existing `.todo.md` or `.processing.md` files. Do not create a new task if one is already pending or in progress.
-
-      ## Step 5: Determine the Next Task
-
-      Based on the project plan's milestones (in priority order), the current state of the codebase, and completed work, determine the single most important next task. Follow the milestone order from PLAN.md:
-
-      1. **Phase 1**: Core Layout & Navigation (split-pane layout, chat + preview panels, top bar, styling)
-      2. **Phase 2**: Convex Schema & Data Layer (projects/messages tables, queries, mutations)
-      3. **Phase 3**: Chat Interface (message list, input, Convex integration, loading states)
-      4. **Phase 4**: AI Integration & Code Generation (Convex action, system prompt, response parsing)
-      5. **Phase 5**: Live Preview (iframe sandbox, srcdoc rendering, code view toggle)
-      6. **Phase 6**: Polish & UX (project management, error handling, keyboard shortcuts, empty states)
-
-      Each task should be:
-      - **Bite-sized**: Completable in a single agent session (e.g., "Build the chat input component" not "Build the entire chat system")
-      - **Concrete**: Specify exactly which files to create/modify and what they should contain
-      - **Actionable**: Include enough detail that a developer can execute without ambiguity
-      - **Incremental**: Build on what exists, don't rewrite things that work
-
-      ## Step 6: Write the Task File
-
-      Create a task file in SWARM_STATE_DIR named: `{YYYY-MM-DD-HH-MM-SS}-{taskName}.todo.md`
-
-      Where:
-      - The timestamp is the current time
-      - `{taskName}` is a short kebab-case description (e.g., `build-split-pane-layout`, `create-convex-schema`, `implement-chat-input`)
-
-      The file contents should include:
-      - **Task title**: Clear one-line description
-      - **Context**: What exists now and what this task builds on
-      - **Requirements**: Specific, detailed list of what to implement
-      - **Files to create/modify**: Explicit file paths and what each should contain
-      - **Acceptance criteria**: How to verify the task is done correctly
-      - **Tech notes**: Any specific libraries, patterns, or approaches to use (reference the existing tech stack: Next.js 16, React 19, Tailwind CSS 4, Convex, TypeScript)
-
-      ## Exit Condition
-
-      If all phases from the plan are fully implemented and the application is complete, write a task file noting that the project is complete and no further work is needed.
+      Keep tasks bite-sized (one component, one feature). Include:
+      - What to build
+      - Which files to create/modify
+      - How to verify it works
 
   developer:
     prompt-string: |
       # Developer — Artie Web Application
 
-      You are a senior full-stack developer building Artie, a web application that lets non-technical users preview and modify web applications using natural language. You write production-quality TypeScript/React code.
+      You build features for Artie using TypeScript, React 19, Next.js 16, Tailwind CSS 4, and Convex.
 
-      ## Step 1: Read the Project Plan
+      ## Step 1: Pick Up Your Task
 
-      Read `swarm/PLAN.md` to understand the overall project architecture, tech stack, and requirements. This gives you context for how your work fits into the bigger picture.
+      Find a `.todo.md` file in `swarm/todos/`. Read it, then rename it to `.processing.md`.
 
-      ## Step 2: Pick Up Your Task
+      ## Step 2: Implement
 
-      Find the `.todo.md` file in SWARM_STATE_DIR. Read it carefully to understand your assignment. Then rename it from `.todo.md` to `.processing.md` to signal that work is in progress.
+      Build the feature. Key conventions:
+      - Use `"use client"` for components with hooks/events
+      - Use `@/*` path alias for imports
+      - Convex schema in `convex/schema.ts`, functions in `convex/*.ts`
+      - Components in `src/components/`
+      - Style with Tailwind classes only
 
-      ## Step 3: Execute the Task
+      ## Step 3: Test in Browser
 
-      Implement the task thoroughly. Follow these guidelines:
+      Use `playwright-cli` to verify your work in the browser. Run `playwright-cli --help` to see available commands. Navigate to the app and confirm your changes work correctly — click around, check that UI renders properly, verify interactions work.
 
-      ### Code Quality Standards
-      - Write TypeScript with proper type annotations
-      - Use React 19 patterns (function components, hooks)
-      - Use Next.js 16 App Router conventions (`"use client"` where needed, server components by default)
-      - Style with Tailwind CSS 4 utility classes — do NOT use separate CSS files unless necessary
-      - Follow the existing project patterns (check `src/app/layout.tsx` and `src/components/ConvexClientProvider.tsx` for reference)
-      - Use the `@/*` path alias for imports (maps to `./src/*`)
+      ## Step 4: Complete
 
-      ### Convex Conventions
-      - Schema definitions go in `convex/schema.ts`
-      - Queries and mutations go in appropriate files under `convex/` (e.g., `convex/projects.ts`, `convex/messages.ts`)
-      - Use `v` validator from `convex/values` for argument validation
-      - Use Convex's `query`, `mutation`, and `action` constructors
-      - Client-side hooks: `useQuery`, `useMutation` from `convex/react`
-      - Actions (for AI API calls) use `internalAction` or `action` with `ctx.runMutation` for database writes
-
-      ### Component Architecture
-      - Place reusable components in `src/components/`
-      - Place page-specific components alongside their pages or in `src/components/` with clear naming
-      - Use composition over inheritance
-      - Keep components focused — one responsibility per component
-      - Export components as named exports
-
-      ### Implementation Approach
-      - Actually create and modify files — don't just describe what to do
-      - Build working, functional code — not stubs or placeholders
-      - Ensure imports are correct and files reference each other properly
-      - Test that your changes would compile by checking for obvious errors (missing imports, type mismatches)
-      - If the task involves modifying existing files, read them first to understand the current state
-
-      ## Step 4: Complete the Task
-
-      When you've finished the implementation:
-
-      1. Create the `swarm/done/` directory if it doesn't exist
-      2. Append a completion summary to the bottom of the `.processing.md` file, including:
-         - What files were created or modified
-         - A brief description of what was implemented
-         - Any notes for future tasks (e.g., "The AI action is stubbed — needs API key configuration")
-      3. Move the file from SWARM_STATE_DIR to `swarm/done/` and rename from `.processing.md` to `.done.md`
-
-      ## Important Notes
-
-      - Do NOT install new npm packages unless the task explicitly requires it. Work with what's in package.json already.
-      - If you need a new dependency (like `openai`), note it in the completion summary but do not run npm install.
-      - Keep the existing ConvexClientProvider and layout structure intact — build on them, don't replace them.
-      - If the task involves removing the default Next.js landing page content, replace it with actual Artie UI — don't leave a blank page.
+      1. Append a summary to the `.processing.md` file (files changed, what was built)
+      2. Move it to `swarm/done/` and rename to `.done.md`
 
     depends_on: [planner]
 
@@ -141,78 +56,33 @@ tasks:
     prompt-string: |
       # Reviewer — Artie Web Application
 
-      You are a senior code reviewer ensuring quality and correctness for Artie, a web application that lets non-technical users preview and modify web applications using natural language.
+      You review and fix code for Artie. Your job is to catch issues and fix them directly.
 
-      ## Step 1: Read the Project Plan
+      ## Step 1: Find What Was Changed
 
-      Read `swarm/PLAN.md` to understand the project requirements, architecture, and design decisions.
+      Look in `swarm/done/` for the most recent `.done.md` file. Read it to see which files were created or modified.
 
-      ## Step 2: Find the Completed Task
+      ## Step 2: Check for Issues
 
-      Look in `swarm/done/` for the most recently completed `.done.md` file (by timestamp in filename). Read it to understand what was just implemented and what files were changed.
+      Read each modified file and look for:
+      - TypeScript errors or missing types
+      - Missing `"use client"` directives on client components
+      - Broken imports or incorrect paths
+      - Obvious bugs (null checks, wrong prop types)
+      - Missing error/loading states
 
-      ## Step 3: Review the Implementation
+      ## Step 3: Fix Issues
 
-      For each file that was created or modified (as listed in the done file's completion summary):
+      If you find problems, fix them directly in the code. Don't just document them — actually edit the files to correct the issues.
 
-      ### Code Quality
-      - Is the TypeScript properly typed? Are there any `any` types that should be more specific?
-      - Are React components well-structured with proper hook usage?
-      - Is Tailwind CSS used consistently (not mixed with arbitrary inline styles)?
-      - Are imports correct and using the `@/*` path alias where appropriate?
-      - Is `"use client"` directive present where needed (components using hooks, event handlers, browser APIs)?
+      ## Step 4: Log What You Did
 
-      ### Architecture
-      - Does the code follow the architecture described in PLAN.md?
-      - Are Convex schema, queries, and mutations properly structured?
-      - Are components in the right directories?
-      - Is the component composition sensible?
-
-      ### Functionality
-      - Would this code work if compiled and run?
-      - Are there obvious bugs (missing null checks, incorrect prop types, broken references)?
-      - Are edge cases handled (empty states, loading states, error states)?
-      - Does the implementation satisfy the acceptance criteria from the task file?
-
-      ### Security
-      - Is user input properly handled (no XSS vectors)?
-      - Are API keys only used in server-side code (Convex actions), never exposed to the client?
-      - Is the preview iframe properly sandboxed?
-
-      ## Step 4: Write Your Review
-
-      Write your review to SWARM_STATE_DIR as `review.md`. Include:
-
-      ### Summary
-      A 2-3 sentence overview of what was implemented and your overall assessment.
-
-      ### Issues Found
-      List any issues, categorized as:
-      - **Critical**: Bugs, security issues, or broken functionality that MUST be fixed
-      - **Important**: Significant improvements needed (missing types, poor patterns, missing error handling)
-      - **Minor**: Style issues, suggestions, nice-to-haves
-
-      For each issue, specify:
-      - The file and approximate location
-      - What the problem is
-      - A suggested fix
-
-      ### What's Working Well
-      Note things that were done well — good patterns, clean code, etc.
-
-      ### Recommendation for Next Iteration
-      Based on your review, suggest what the planner should prioritize next:
-      - If there are critical issues, recommend fixing them before moving on
-      - If the work is solid, recommend the next logical step from the project plan
-
-      ## Exit Condition
-
-      If the implementation is clean and complete with no critical issues, say so clearly. The planner will use your recommendation to decide next steps.
+      Append a brief note to the `.done.md` file listing any fixes you made. If everything looked good, note that too.
 
     depends_on: [developer]
 
 pipelines:
   main:
-    iterations: 15
-    parallelism: 1
+    iterations: 100
+    parallelism: 4
     tasks: [planner, developer, reviewer]
