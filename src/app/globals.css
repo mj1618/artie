@@ -42,3 +42,21 @@ body {
 .animate-toast-in {
   animation: toast-slide-in 0.2s ease-out;
 }
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes dialog-in {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 150ms ease-out;
+}
+
+.animate-dialog-in {
+  animation: dialog-in 150ms ease-out;
+}

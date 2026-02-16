@@ -50,6 +50,8 @@ export const connectGithub = mutation({
   args: {
     githubAccessToken: v.string(),
     githubUsername: v.string(),
+    githubRefreshToken: v.optional(v.string()),
+    githubTokenExpiresAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -61,6 +63,8 @@ export const connectGithub = mutation({
     if (profile) {
       await ctx.db.patch("userProfiles", profile._id, {
         githubAccessToken: args.githubAccessToken,
+        githubRefreshToken: args.githubRefreshToken,
+        githubTokenExpiresAt: args.githubTokenExpiresAt,
         githubUsername: args.githubUsername,
       });
     } else {
@@ -68,9 +72,33 @@ export const connectGithub = mutation({
         userId,
         displayName: args.githubUsername,
         githubAccessToken: args.githubAccessToken,
+        githubRefreshToken: args.githubRefreshToken,
+        githubTokenExpiresAt: args.githubTokenExpiresAt,
         githubUsername: args.githubUsername,
       });
     }
+  },
+});
+
+export const updateGithubTokens = mutation({
+  args: {
+    githubAccessToken: v.string(),
+    githubRefreshToken: v.optional(v.string()),
+    githubTokenExpiresAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) throw new Error("Profile not found");
+    await ctx.db.patch("userProfiles", profile._id, {
+      githubAccessToken: args.githubAccessToken,
+      githubRefreshToken: args.githubRefreshToken,
+      githubTokenExpiresAt: args.githubTokenExpiresAt,
+    });
   },
 });
 
@@ -86,6 +114,8 @@ export const disconnectGithub = mutation({
     if (profile) {
       await ctx.db.patch("userProfiles", profile._id, {
         githubAccessToken: undefined,
+        githubRefreshToken: undefined,
+        githubTokenExpiresAt: undefined,
         githubUsername: undefined,
       });
     }

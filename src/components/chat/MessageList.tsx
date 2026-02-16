@@ -22,12 +22,16 @@ interface MessageListProps {
   messages: Message[];
   repoId: Id<"repos">;
   fileChangesByMessageId: Record<string, Id<"fileChanges">>;
+  sessionBranch?: string;
+  onRetryFileChange?: (fileChangeId: Id<"fileChanges">) => void;
 }
 
 export function MessageList({
   messages,
   repoId,
   fileChangesByMessageId,
+  sessionBranch,
+  onRetryFileChange,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const hasStreaming = messages.some((m) => m.streaming);
@@ -59,6 +63,8 @@ export function MessageList({
           repoId={repoId}
           fileChangeId={fileChangesByMessageId[message._id]}
           streaming={message.streaming}
+          sessionBranch={sessionBranch}
+          onRetryFileChange={onRetryFileChange}
         />
       ))}
       <div ref={bottomRef} />

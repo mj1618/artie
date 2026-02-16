@@ -94,6 +94,27 @@ export const markApplied = mutation({
   },
 });
 
+export const markFailed = mutation({
+  args: {
+    fileChangeId: v.id("fileChanges"),
+    error: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch("fileChanges", args.fileChangeId, {
+      error: args.error,
+    });
+  },
+});
+
+export const clearError = mutation({
+  args: { fileChangeId: v.id("fileChanges") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch("fileChanges", args.fileChangeId, {
+      error: undefined,
+    });
+  },
+});
+
 export const revertFileChange = mutation({
   args: { fileChangeId: v.id("fileChanges") },
   handler: async (ctx, args) => {

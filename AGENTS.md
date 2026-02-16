@@ -1,4 +1,13 @@
 
+# local dev user
+
+Use this to sign in as an owner with some projects setup for testing:
+
+user: matthew.stephen.james@gmail.com
+pass: xt4yArXEXhDjng8R9T7QTpjL8j&@
+
+
+
 # use @/ for paths
 
 Use @/ for long ../ style paths

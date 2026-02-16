@@ -9,10 +9,16 @@ import {
 import { FileExplorer } from "./FileExplorer";
 import { PreviewNavBar } from "./PreviewNavBar";
 import { useToast } from "@/lib/useToast";
+import { SandpackPreview } from "./SandpackPreview";
+import { FlyioSpritePreview } from "./FlyioSpritePreview";
+
+type RuntimeType = "webcontainer" | "flyio-sprite" | "sandpack";
 
 interface PreviewPanelProps {
   repoId: Id<"repos">;
   sessionId: Id<"sessions"> | null;
+  branch?: string;
+  runtime?: RuntimeType;
 }
 
 function PhaseLabel({ phase }: { phase: ContainerPhase }) {
@@ -36,6 +42,128 @@ function PhaseLabel({ phase }: { phase: ContainerPhase }) {
   }
 }
 
+function BootProgressStepper({ phase }: { phase: ContainerPhase }) {
+  const steps = [
+    { key: "booting", label: "Starting environment" },
+    { key: "fetching", label: "Loading files" },
+    { key: "installing", label: "Installing dependencies" },
+    { key: "starting", label: "Starting dev server" },
+    { key: "running", label: "Ready" },
+  ];
+
+  const phaseToStep: Record<string, number> = {
+    idle: -1,
+    booting: 0,
+    fetching: 1,
+    mounting: 1,
+    installing: 2,
+    starting: 3,
+    running: 4,
+  };
+
+  const currentStep = phaseToStep[phase] ?? -1;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {steps.map((step, i) => {
+        const isComplete = i < currentStep;
+        const isCurrent = i === currentStep;
+
+        return (
+          <div key={step.key} className="flex items-center gap-3">
+            {isComplete ? (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
+                <svg className="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+            ) : isCurrent ? (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-blue-400 animate-pulse">
+                <div className="h-2 w-2 rounded-full bg-blue-400" />
+              </div>
+            ) : (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-700">
+                <div className="h-2 w-2 rounded-full bg-zinc-700" />
+              </div>
+            )}
+
+            <span className={`text-sm ${
+              isComplete ? "text-emerald-400" : isCurrent ? "text-zinc-100" : "text-zinc-600"
+            }`}>
+              {step.label}
+              {isCurrent && "..."}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+interface FriendlyError {
+  title: string;
+  description: string;
+  suggestion: string;
+}
+
+function getFriendlyError(rawError: string): FriendlyError {
+  const lower = rawError.toLowerCase();
+
+  if (lower.includes("failed to fetch") || lower.includes("networkerror") || lower.includes("network error") || lower.includes("etch failed")) {
+    return {
+      title: "Connection issue",
+      description: "We couldn't download the repository files.",
+      suggestion: "Check your internet connection and try again.",
+    };
+  }
+
+  if (lower.includes("webcontainer") || lower.includes("boot") || lower.includes("sharedarraybuffer")) {
+    return {
+      title: "Browser environment issue",
+      description: "The preview environment couldn't start in your browser.",
+      suggestion: "Try refreshing the page, or use a different browser (Chrome or Edge recommended).",
+    };
+  }
+
+  if (lower.includes("npm install") || lower.includes("npm err") || lower.includes("enoent") || lower.includes("package.json")) {
+    return {
+      title: "Dependency installation failed",
+      description: "Some project dependencies couldn't be installed.",
+      suggestion: "This usually resolves on retry. Click Retry below.",
+    };
+  }
+
+  if (lower.includes("exited with code") || lower.includes("process exited") || lower.includes("eaddrinuse")) {
+    return {
+      title: "Dev server stopped unexpectedly",
+      description: "The development server encountered an issue and stopped.",
+      suggestion: "Click Retry to restart the preview.",
+    };
+  }
+
+  if (lower.includes("timeout") || lower.includes("timed out")) {
+    return {
+      title: "Preview took too long",
+      description: "The preview didn't start within the expected time.",
+      suggestion: "Large projects may take longer. Click Retry to try again.",
+    };
+  }
+
+  if (lower.includes("memory") || lower.includes("heap") || lower.includes("oom") || lower.includes("allocation")) {
+    return {
+      title: "Out of memory",
+      description: "The preview ran out of browser memory.",
+      suggestion: "Close other browser tabs and try again. Very large projects may need the Fly.io runtime instead.",
+    };
+  }
+
+  return {
+    title: "Something went wrong",
+    description: "The preview couldn't start.",
+    suggestion: "Click Retry below. If the problem persists, check the terminal output for details.",
+  };
+}
+
 function TerminalOutput({ output }: { output: string[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -55,10 +183,26 @@ function TerminalOutput({ output }: { output: string[] }) {
   );
 }
 
-export function PreviewPanel({ repoId, sessionId }: PreviewPanelProps) {
+export function PreviewPanel({ repoId, sessionId, branch, runtime = "webcontainer" }: PreviewPanelProps) {
+  // If Sandpack runtime, render SandpackPreview component
+  if (runtime === "sandpack") {
+    return <SandpackPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
+  }
+
+  // If Fly.io Sprite runtime, render FlyioSpritePreview component
+  if (runtime === "flyio-sprite") {
+    return <FlyioSpritePreview repoId={repoId} sessionId={sessionId} branch={branch} />;
+  }
+
+  // WebContainer runtime (default)
+  return <WebContainerPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
+}
+
+function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelProps, "runtime">) {
   const [view, setView] = useState<"preview" | "code" | "terminal">("preview");
+  const [showDetails, setShowDetails] = useState(false);
   const { phase, previewUrl, error, output, retry, refreshFiles, refreshing } =
-    useWorkspaceContainer(repoId, sessionId);
+    useWorkspaceContainer(repoId, sessionId, { branch });
   const { toast } = useToast();
 
   const handleRefreshFromGitHub = async () => {
@@ -167,11 +311,33 @@ export function PreviewPanel({ repoId, sessionId }: PreviewPanelProps) {
               />
             </svg>
           </div>
-          <p className="max-w-sm text-center text-sm text-red-600 dark:text-red-400">
-            {error}
-          </p>
-          {output.length > 0 && (
-            <div className="w-full max-w-lg rounded bg-zinc-950 p-3 font-mono text-xs text-zinc-400 max-h-40 overflow-auto">
+          {(() => {
+            const friendly = getFriendlyError(error ?? "");
+            return (
+              <>
+                <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">{friendly.title}</h3>
+                <p className="max-w-sm text-center text-sm text-zinc-600 dark:text-zinc-400">
+                  {friendly.description}
+                </p>
+                <p className="max-w-sm text-center text-xs text-zinc-500 dark:text-zinc-500">
+                  {friendly.suggestion}
+                </p>
+              </>
+            );
+          })()}
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-400 underline"
+          >
+            {showDetails ? "Hide technical details" : "Show technical details"}
+          </button>
+          {showDetails && error && (
+            <p className="max-w-sm text-center font-mono text-xs text-red-500/70 dark:text-red-400/70">
+              {error}
+            </p>
+          )}
+          {showDetails && output.length > 0 && (
+            <div className="w-full max-w-lg rounded bg-zinc-100 p-3 font-mono text-xs text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400 max-h-40 overflow-auto">
               {output.slice(-10).map((line, i) => (
                 <div key={i} className="whitespace-pre-wrap break-all">
                   {line}
@@ -187,13 +353,10 @@ export function PreviewPanel({ repoId, sessionId }: PreviewPanelProps) {
           </button>
         </div>
       ) : isLoading ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900 dark:border-zinc-600 dark:border-t-white" />
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            <PhaseLabel phase={phase} />
-          </p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
+          <BootProgressStepper phase={phase} />
           {output.length > 0 && (
-            <div className="w-full max-w-lg rounded bg-zinc-950 p-3 font-mono text-xs text-zinc-400 max-h-32 overflow-auto">
+            <div className="mt-2 w-full max-w-lg rounded bg-zinc-950 p-3 font-mono text-xs text-zinc-400 max-h-32 overflow-auto">
               {output.slice(-5).map((line, i) => (
                 <div key={i} className="whitespace-pre-wrap break-all">
                   {line}

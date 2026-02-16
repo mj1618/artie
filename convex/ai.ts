@@ -202,9 +202,9 @@ export const generateResponse = action({
         : null;
 
       const defaultModel = () =>
-        createAnthropic({
-          apiKey: process.env.ANTHROPIC_API_KEY,
-        })("claude-sonnet-4-20250514");
+        createOpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        })("gpt-5.2-codex");
 
       if (team?.llmProvider && team?.llmApiKey) {
         switch (team.llmProvider) {
@@ -237,12 +237,28 @@ export const generateResponse = action({
         const userToken = await getUserGithubToken(ctx);
         const octokit = new Octokit({ auth: userToken || process.env.GITHUB_TOKEN });
 
-        const { data: treeData } = await octokit.git.getTree({
-          owner: repo.githubOwner,
-          repo: repo.githubRepo,
-          tree_sha: repo.defaultBranch,
-          recursive: "1",
-        });
+        // Use session's branch if available, fall back to repo default
+        let branch = session?.branchName ?? repo.defaultBranch;
+        let treeData;
+        try {
+          const result = await octokit.git.getTree({
+            owner: repo.githubOwner,
+            repo: repo.githubRepo,
+            tree_sha: branch,
+            recursive: "1",
+          });
+          treeData = result.data;
+        } catch {
+          // Branch doesn't exist on GitHub yet, fall back to default
+          branch = repo.defaultBranch;
+          const result = await octokit.git.getTree({
+            owner: repo.githubOwner,
+            repo: repo.githubRepo,
+            tree_sha: branch,
+            recursive: "1",
+          });
+          treeData = result.data;
+        }
 
         const tree = treeData.tree
           .filter(
@@ -280,7 +296,7 @@ export const generateResponse = action({
                   owner: repo.githubOwner,
                   repo: repo.githubRepo,
                   path,
-                  ref: repo.defaultBranch,
+                  ref: branch,
                 });
                 if ("content" in data && data.encoding === "base64") {
                   return {

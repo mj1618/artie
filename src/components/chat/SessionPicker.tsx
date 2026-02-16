@@ -217,12 +217,17 @@ export function SessionPicker({
                     >
                       <div className="flex items-center justify-between">
                         <span className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                          {getSessionLabel(session)}
+                          {session.featureName ?? getSessionLabel(session)}
                         </span>
                         <span className="ml-2 shrink-0 text-[10px] text-zinc-400">
                           {formatRelativeTime(session.lastActiveAt)}
                         </span>
                       </div>
+                      {session.branchName && (
+                        <span className="truncate text-[11px] font-mono text-blue-400 dark:text-blue-400">
+                          {session.branchName}
+                        </span>
+                      )}
                       {session.firstMessage && session.name && (
                         <span className="truncate text-[11px] text-zinc-400 dark:text-zinc-500">
                           {session.firstMessage.length > 50

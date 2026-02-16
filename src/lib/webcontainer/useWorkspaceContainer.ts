@@ -29,6 +29,7 @@ export interface WorkspaceContainerState {
 export function useWorkspaceContainer(
   repoId: Id<"repos">,
   sessionId: Id<"sessions"> | null,
+  options?: { branch?: string },
 ) {
   const [state, setState] = useState<WorkspaceContainerState>({
     phase: "idle",
@@ -39,6 +40,7 @@ export function useWorkspaceContainer(
   const [refreshing, setRefreshing] = useState(false);
   const fetchRepoFiles = useAction(api.github.fetchRepoForWebContainer);
   const startedRef = useRef(false);
+  const bootedBranchRef = useRef<string | undefined>(undefined);
   const containerRef = useRef<Awaited<ReturnType<typeof getWebContainer>> | null>(null);
 
   const fileChanges = useQuery(
@@ -49,6 +51,7 @@ export function useWorkspaceContainer(
   const boot = useCallback(async () => {
     if (startedRef.current) return;
     startedRef.current = true;
+    bootedBranchRef.current = options?.branch;
 
     try {
       setState((s) => ({ ...s, phase: "booting", error: null }));
@@ -56,20 +59,36 @@ export function useWorkspaceContainer(
       containerRef.current = container;
 
       setState((s) => ({ ...s, phase: "fetching" }));
-      const fileTree = await fetchRepoFiles({ repoId });
+
+      // Fetch files from GitHub
+      const result = await fetchRepoFiles({ repoId, branch: options?.branch });
+      const { files, resolvedBranch, didFallback } = result as {
+        files: FileSystemTree;
+        resolvedBranch: string;
+        didFallback: boolean;
+      };
+
+      if (didFallback) {
+        console.log(
+          `[useWorkspaceContainer] Branch fallback occurred (${options?.branch} → ${resolvedBranch})`
+        );
+      }
 
       setState((s) => ({ ...s, phase: "mounting" }));
-      await loadFiles(container, fileTree as any);
+      await loadFiles(container, files);
 
-      await startDevServer(container, (devState: Partial<DevServerState>) => {
-        setState((s) => ({
-          ...s,
-          phase: (devState.status as ContainerPhase) ?? s.phase,
-          previewUrl: devState.url ?? s.previewUrl,
-          error: devState.error ?? s.error,
-          output: devState.output ?? s.output,
-        }));
-      });
+      await startDevServer(
+        container,
+        (devState: Partial<DevServerState>) => {
+          setState((s) => ({
+            ...s,
+            phase: (devState.status as ContainerPhase) ?? s.phase,
+            previewUrl: devState.url ?? s.previewUrl,
+            error: devState.error ?? s.error,
+            output: devState.output ?? s.output,
+          }));
+        }
+      );
     } catch (err) {
       setState((s) => ({
         ...s,
@@ -77,7 +96,7 @@ export function useWorkspaceContainer(
         error: err instanceof Error ? err.message : "Failed to start preview",
       }));
     }
-  }, [repoId, fetchRepoFiles]);
+  }, [repoId, fetchRepoFiles, options?.branch]);
 
   const refreshFiles = useCallback(async (): Promise<{
     success: boolean;
@@ -90,7 +109,12 @@ export function useWorkspaceContainer(
 
     setRefreshing(true);
     try {
-      const freshFiles = await fetchRepoFiles({ repoId });
+      const result = await fetchRepoFiles({ repoId, branch: options?.branch });
+      const { files } = result as {
+        files: FileSystemTree;
+        resolvedBranch: string;
+        didFallback: boolean;
+      };
 
       // Collect paths that have pending (non-reverted) file changes
       const pendingPaths = new Set<string>();
@@ -103,7 +127,7 @@ export function useWorkspaceContainer(
         }
       }
 
-      let filesToMount = freshFiles as FileSystemTree;
+      let filesToMount = files;
       if (pendingPaths.size > 0) {
         filesToMount = removePathsFromTree(filesToMount, pendingPaths);
       }
@@ -119,7 +143,7 @@ export function useWorkspaceContainer(
         error: err instanceof Error ? err.message : "Failed to refresh files",
       };
     }
-  }, [state.phase, fetchRepoFiles, repoId, fileChanges]);
+  }, [state.phase, fetchRepoFiles, repoId, fileChanges, options?.branch]);
 
   const retry = useCallback(() => {
     startedRef.current = false;
@@ -133,6 +157,22 @@ export function useWorkspaceContainer(
     });
     boot();
   }, [boot]);
+
+  // When branch changes after initial boot, teardown and reboot
+  useEffect(() => {
+    if (!startedRef.current) return;
+    if (options?.branch === bootedBranchRef.current) return;
+
+    startedRef.current = false;
+    containerRef.current = null;
+    teardownWebContainer();
+    setState({
+      phase: "idle",
+      previewUrl: null,
+      error: null,
+      output: [],
+    });
+  }, [options?.branch]);
 
   useEffect(() => {
     boot();

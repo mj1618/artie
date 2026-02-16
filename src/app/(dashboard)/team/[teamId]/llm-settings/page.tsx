@@ -10,6 +10,7 @@ import { useToast } from "@/lib/useToast";
 
 const MODEL_OPTIONS: Record<string, { label: string; value: string }[]> = {
   openai: [
+    { label: "GPT-5.2 Codex", value: "gpt-5.2-codex" },
     { label: "GPT-4", value: "gpt-4" },
     { label: "GPT-4 Turbo", value: "gpt-4-turbo" },
     { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
@@ -178,13 +179,13 @@ export default function LlmSettingsPage() {
               <dd className="text-sm font-medium text-zinc-200">
                 {llmSettings.llmProvider
                   ? PROVIDER_LABELS[llmSettings.llmProvider] ?? llmSettings.llmProvider
-                  : "Platform Default (Anthropic Claude)"}
+                  : "Platform Default (OpenAI Codex)"}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
               <dt className="text-sm text-zinc-400">Model</dt>
               <dd className="text-sm font-medium text-zinc-200">
-                {llmSettings.llmModel ?? "claude-sonnet-4-20250514"}
+                {llmSettings.llmModel ?? "gpt-5.2-codex"}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">

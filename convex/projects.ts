@@ -39,6 +39,7 @@ export const addRepo = mutation({
     githubRepo: v.string(),
     defaultBranch: v.optional(v.string()),
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -67,6 +68,7 @@ export const addRepo = mutation({
       pushStrategy: args.pushStrategy,
       connectedBy: userId,
       connectedAt: Date.now(),
+      runtime: args.runtime ?? "webcontainer",
     });
   },
 });
@@ -97,6 +99,10 @@ export const updateRepo = mutation({
     repoId: v.id("repos"),
     pushStrategy: v.optional(v.union(v.literal("direct"), v.literal("pr"))),
     defaultBranch: v.optional(v.string()),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"))),
+    externalConvexUrl: v.optional(v.string()),
+    externalConvexDeployment: v.optional(v.string()),
+    clearExternalConvex: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -105,9 +111,25 @@ export const updateRepo = mutation({
     if (!repo) throw new Error("Repo not found");
     const team = await ctx.db.get("teams", repo.teamId);
     if (!team || team.ownerId !== userId) throw new Error("Not authorized");
-    const updates: Record<string, string> = {};
+    const updates: Partial<{
+      pushStrategy: "direct" | "pr";
+      defaultBranch: string;
+      runtime: "webcontainer" | "flyio-sprite" | "sandpack";
+      externalConvexUrl: string;
+      externalConvexDeployment: string;
+    }> = {};
     if (args.pushStrategy !== undefined) updates.pushStrategy = args.pushStrategy;
     if (args.defaultBranch !== undefined) updates.defaultBranch = args.defaultBranch;
+    if (args.runtime !== undefined) updates.runtime = args.runtime;
+    if (args.clearExternalConvex) {
+      await ctx.db.patch("repos", args.repoId, {
+        externalConvexUrl: undefined,
+        externalConvexDeployment: undefined,
+      });
+      return;
+    }
+    if (args.externalConvexUrl !== undefined) updates.externalConvexUrl = args.externalConvexUrl;
+    if (args.externalConvexDeployment !== undefined) updates.externalConvexDeployment = args.externalConvexDeployment;
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch("repos", args.repoId, updates);
     }

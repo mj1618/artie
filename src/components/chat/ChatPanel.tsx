@@ -15,11 +15,15 @@ export function ChatPanel({
   sessions,
   initialSessionId,
   onSessionChange,
+  onNewChatRequest,
+  pendingBranchInfo,
 }: {
   repoId: Id<"repos">;
   sessions: Doc<"sessions">[];
   initialSessionId: Id<"sessions"> | null;
   onSessionChange?: (sessionId: Id<"sessions"> | null) => void;
+  onNewChatRequest?: () => void;
+  pendingBranchInfo?: { branchName: string; featureName: string } | null;
 }) {
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<Id<"sessions"> | null>(
@@ -35,6 +39,8 @@ export function ChatPanel({
   const sendMessage = useMutation(api.messages.send);
   const generateResponse = useAction(api.ai.generateResponse);
   const markApplied = useMutation(api.fileChanges.markApplied);
+  const markFailed = useMutation(api.fileChanges.markFailed);
+  const clearFileChangeError = useMutation(api.fileChanges.clearError);
   const messages = useQuery(
     api.messages.list,
     sessionId ? { sessionId } : "skip",
@@ -65,7 +71,7 @@ export function ChatPanel({
 
   // Apply file changes to WebContainer when they arrive
   useEffect(() => {
-    if (!latestChange || latestChange.applied || latestChange.reverted) return;
+    if (!latestChange || latestChange.applied || latestChange.reverted || latestChange.error) return;
 
     async function applyChanges() {
       try {
@@ -75,12 +81,32 @@ export function ChatPanel({
         }
         await markApplied({ fileChangeId: latestChange!._id });
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
         console.error("Failed to apply file changes to WebContainer:", err);
+        toast({
+          type: "error",
+          message: "Failed to apply changes to the preview. Try refreshing the preview.",
+        });
+        await markFailed({
+          fileChangeId: latestChange!._id,
+          error: errorMsg,
+        }).catch(() => {});
       }
     }
 
     applyChanges();
-  }, [latestChange, markApplied]);
+  }, [latestChange, markApplied, markFailed, toast]);
+
+  const retryApplyChanges = async (fileChangeId: Id<"fileChanges">) => {
+    try {
+      await clearFileChangeError({ fileChangeId });
+    } catch (err) {
+      toast({
+        type: "error",
+        message: "Failed to retry. Please refresh the page.",
+      });
+    }
+  };
 
   const handleSelectSession = (id: Id<"sessions">) => {
     setSessionId(id);
@@ -88,8 +114,12 @@ export function ChatPanel({
   };
 
   const handleNewChat = () => {
-    setSessionId(null);
-    onSessionChange?.(null);
+    if (onNewChatRequest) {
+      onNewChatRequest();
+    } else {
+      setSessionId(null);
+      onSessionChange?.(null);
+    }
   };
 
   const handleDeleteSession = async (id: Id<"sessions">) => {
@@ -132,7 +162,11 @@ export function ChatPanel({
     try {
       let currentSessionId = sessionId;
       if (!currentSessionId) {
-        currentSessionId = await createSession({ repoId });
+        currentSessionId = await createSession({
+          repoId,
+          branchName: pendingBranchInfo?.branchName,
+          featureName: pendingBranchInfo?.featureName,
+        });
         setSessionId(currentSessionId);
         onSessionChange?.(currentSessionId);
       }
@@ -182,6 +216,8 @@ export function ChatPanel({
         messages={messages ?? []}
         repoId={repoId}
         fileChangesByMessageId={fileChangesByMessageId}
+        sessionBranch={sessions.find((s) => s._id === sessionId)?.branchName}
+        onRetryFileChange={retryApplyChanges}
       />
       <form
         onSubmit={(e) => {

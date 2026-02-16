@@ -190,3 +190,33 @@ export default function DashboardPage() {
 - The onboarding checklist should have a subtle, non-intrusive design — a bordered card with a light background, not a modal or blocking overlay.
 - The "Connect GitHub" step links to `/settings` rather than inlining the OAuth flow, since the OAuth flow involves a redirect to GitHub and back.
 - The "Connect a repository" step links to the first team's page. If the user has multiple teams, they can choose which to connect repos to from the team page.
+
+## Completion Summary
+
+### Status: Already Implemented
+
+The onboarding flow was already fully implemented by a previous task. Verified all acceptance criteria pass:
+
+### Files Involved
+| File | Status | Description |
+|------|--------|-------------|
+| `src/app/(dashboard)/home/page.tsx` | **Already modified** | Contains `OnboardingChecklist` component with full step tracking, progress bar, action buttons, "Setup complete!" state, and localStorage-based dismissal |
+| `convex/projects.ts` | **Already modified** | Contains `hasAnyRepos` query that efficiently checks if user has any repos across all teams (early exit on first found) |
+
+### Verified Acceptance Criteria
+1. Checklist renders at top of dashboard for users who haven't dismissed it
+2. Shows 3 steps: Create a team, Connect GitHub, Connect a repository
+3. Each step shows done/pending status with checkmark or numbered circle icon
+4. Progress indicator shows "X of 3 complete" with animated progress bar
+5. Next step has clickable action button (Create Team button, Connect GitHub link, Browse Repos link)
+6. Completed steps show green checkmark with strikethrough text
+7. Future steps are dimmed (opacity-50)
+8. "Setup complete!" banner with green styling when all 3 done
+9. Dismiss button stores `artie_onboarding_dismissed=true` in localStorage
+10. No flash on load (starts with `dismissed=true`, checks localStorage in useEffect)
+11. `npm -s tsc -p tsconfig.json --noEmit` passes with zero errors
+
+### Browser Testing
+- Logged in and verified dashboard renders correctly
+- "Setup complete!" banner visible for user with all steps done
+- Dismiss button works and persists across page reloads via localStorage

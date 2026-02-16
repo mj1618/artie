@@ -5,6 +5,8 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 export const create = mutation({
   args: {
     repoId: v.id("repos"),
+    branchName: v.optional(v.string()),
+    featureName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -15,6 +17,8 @@ export const create = mutation({
       userId,
       createdAt: now,
       lastActiveAt: now,
+      branchName: args.branchName,
+      featureName: args.featureName,
     });
   },
 });
@@ -43,6 +47,39 @@ export const listByRepo = query({
       .order("desc")
       .collect();
     return sessions.filter((s) => s.userId === userId);
+  },
+});
+
+export const listRecent = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const limit = args.limit ?? 5;
+
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    const sorted = sessions
+      .sort((a, b) => b.lastActiveAt - a.lastActiveAt)
+      .slice(0, limit);
+
+    const resolved = await Promise.all(
+      sorted.map(async (session) => {
+        const repo = await ctx.db.get("repos", session.repoId);
+        return {
+          ...session,
+          repoName: repo
+            ? `${repo.githubOwner}/${repo.githubRepo}`
+            : "Unknown repo",
+        };
+      }),
+    );
+
+    return resolved;
   },
 });
 

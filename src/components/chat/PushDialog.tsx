@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { useToast } from "@/lib/useToast";
 
 interface PushDialogProps {
   repoId: Id<"repos">;
@@ -11,6 +12,7 @@ interface PushDialogProps {
   fileChangeId: Id<"fileChanges">;
   files: string[];
   messageContent: string;
+  sessionBranch?: string;
   onClose: () => void;
 }
 
@@ -51,6 +53,7 @@ export function PushDialog({
   fileChangeId,
   files,
   messageContent,
+  sessionBranch,
   onClose,
 }: PushDialogProps) {
   const repo = useQuery(api.projects.get, { repoId });
@@ -61,12 +64,19 @@ export function PushDialog({
 
   const [commitMessage, setCommitMessage] = useState(defaultCommit);
   const [branchName, setBranchName] = useState(
-    `artie/${slugify(defaultCommit)}`,
+    sessionBranch ?? `artie/${slugify(defaultCommit)}`,
   );
   const [prTitle, setPrTitle] = useState(defaultCommit);
   const [prBody, setPrBody] = useState(getDefaultPrBody(messageContent, files));
   const [pushing, setPushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pushResult, setPushResult] = useState<{
+    commitSha: string;
+    commitUrl?: string;
+    prUrl?: string;
+    branchName?: string;
+  } | null>(null);
+  const { toast } = useToast();
 
   const isPr = repo?.pushStrategy === "pr";
 
@@ -99,7 +109,7 @@ export function PushDialog({
     setPushing(true);
     setError(null);
     try {
-      await pushChanges({
+      const result = await pushChanges({
         repoId,
         messageId,
         fileChangeId,
@@ -112,7 +122,7 @@ export function PushDialog({
             }
           : {}),
       });
-      onClose();
+      setPushResult(result);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Push failed";
       setError(message);
@@ -121,14 +131,97 @@ export function PushDialog({
     }
   };
 
-  if (repo === undefined) {
+  const handleDone = () => {
+    toast({
+      type: "success",
+      message: isPr
+        ? "Pull request created"
+        : `Changes pushed (${pushResult?.commitSha.slice(0, 7)})`,
+    });
+    onClose();
+  };
+
+  if (pushResult) {
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleDone();
+        }}
         role="dialog"
         aria-modal="true"
       >
-        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6">
+        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 animate-dialog-in">
+          <div className="flex flex-col items-center text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
+              <svg
+                className="h-6 w-6 text-green-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.5 12.75l6 6 9-13.5"
+                />
+              </svg>
+            </div>
+            <h3 className="mt-3 text-lg font-semibold text-zinc-100">
+              Changes pushed successfully!
+            </h3>
+            <p className="mt-1 text-sm text-zinc-400">
+              {isPr
+                ? `Pull request created on ${pushResult.branchName ?? branchName}`
+                : `Committed to ${repo?.defaultBranch}`}
+            </p>
+            <p className="mt-2 font-mono text-xs text-zinc-500">
+              {pushResult.commitSha.slice(0, 7)}
+            </p>
+          </div>
+
+          <div className="mt-4 flex justify-center gap-3">
+            {pushResult.prUrl && (
+              <a
+                href={pushResult.prUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
+              >
+                View Pull Request
+              </a>
+            )}
+            {!pushResult.prUrl && pushResult.commitUrl && (
+              <a
+                href={pushResult.commitUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
+              >
+                View on GitHub
+              </a>
+            )}
+            <button
+              onClick={handleDone}
+              className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (repo === undefined) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 animate-dialog-in">
           <div className="flex items-center justify-center py-8">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
           </div>
@@ -140,14 +233,14 @@ export function PushDialog({
   if (repo === null) {
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
         role="dialog"
         aria-modal="true"
       >
-        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6">
+        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 animate-dialog-in">
           <p className="text-sm text-red-400">Repository not found.</p>
           <div className="mt-4 flex justify-end">
             <button
@@ -164,7 +257,7 @@ export function PushDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -174,7 +267,7 @@ export function PushDialog({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 outline-none"
+        className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 outline-none animate-dialog-in"
       >
         <h3 className="text-lg font-semibold text-zinc-100">
           {isPr ? "Push Changes as Pull Request" : "Push Changes to GitHub"}
@@ -218,6 +311,11 @@ export function PushDialog({
                   className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-mono text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none disabled:opacity-50"
                   placeholder="artie/my-changes"
                 />
+                {sessionBranch && (
+                  <p className="mt-1 text-xs text-blue-400">
+                    Using the branch from your current session. Changes will be pushed to this branch.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-zinc-400">

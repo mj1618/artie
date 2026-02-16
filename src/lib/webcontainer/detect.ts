@@ -15,6 +15,12 @@ export async function detectProjectType(
       ...packageJson.dependencies,
       ...packageJson.devDependencies,
     };
+    const scripts = packageJson.scripts || {};
+
+    // No scripts = static site (just HTML/CSS/JS, no build step)
+    if (Object.keys(scripts).length === 0) {
+      return "static";
+    }
 
     if (deps["next"]) return "nextjs";
     if (deps["vite"]) return "vite";

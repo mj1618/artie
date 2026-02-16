@@ -1,4 +1,9 @@
 
+# local dev user
+
+user: matthew.stephen.james@gmail.com
+pass: xt4yArXEXhDjng8R9T7QTpjL8j&@
+
 # use @/ for paths
 
 Use @/ for long ../ style paths
@@ -15,16 +20,7 @@ Don't disable typecheck.
 
 Use `npm -s tsc -p tsconfig.json --noEmit` to find frontend ts build errors.
 
-
-Use the following build to run the next server ALWAYS for testing the application in a browser:
-
-```bash
-export BUILD_DIR=./builds/{unique-build-dir}
-npm run build
-PORT={A-FREE-PORT} node ./builds/{unique-build-dir}/standalone/server.js
-```
-
-Do NOT bother running `npm run dev` as it gets STUCK all the time - it's really annoying so just avoid this and instead run the build directly as shown above. Kill the node server when you are done with it.
+Use `npm run dev` to run nextjs (you may need to kill it if unresponsive).
 
 # Types
 
@@ -99,7 +95,5 @@ export default async function PureServerPage() {
 When doing a number of "awaits" - prefer using Promise.all rather than a for loop so that things run in parallel.
 
 # Browser Testing
-
-IGNORE THE BROWSER YOU HAVE BEEN ASKED TO USE - use playwright-cli instead. It is faster and better than the one 
 
 Use the `playwright-cli --help` to see how to use playwright-cli to do manual-click browser testing.

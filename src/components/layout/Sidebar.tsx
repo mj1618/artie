@@ -73,6 +73,11 @@ export function Sidebar() {
             label="Settings"
             active={pathname === "/settings"}
           />
+          <NavItem
+            href="/pull-requests"
+            label="Pull Requests"
+            active={pathname.startsWith("/pull-requests")}
+          />
         </div>
 
         <div className="mt-6">
@@ -137,6 +142,16 @@ export function Sidebar() {
                         }`}
                       >
                         LLM Settings
+                      </Link>
+                      <Link
+                        href={`/team/${team._id}/deploy-keys`}
+                        className={`block rounded px-3 py-1.5 text-xs ${
+                          pathname === `/team/${team._id}/deploy-keys`
+                            ? "bg-zinc-800 text-white"
+                            : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
+                        }`}
+                      >
+                        Deploy Keys
                       </Link>
                     </div>
                     <TeamRepos teamId={team._id} />

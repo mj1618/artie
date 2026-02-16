@@ -25,11 +25,18 @@ function GitHubConnection() {
     if (handledRef.current) return;
     const token = searchParams.get("github_token");
     const username = searchParams.get("github_username");
+    const refreshToken = searchParams.get("github_refresh_token");
+    const tokenExpiresAt = searchParams.get("github_token_expires_at");
     const error = searchParams.get("error");
 
     if (token && username) {
       handledRef.current = true;
-      connectGithubMutation({ githubAccessToken: token, githubUsername: username })
+      connectGithubMutation({
+        githubAccessToken: token,
+        githubUsername: username,
+        githubRefreshToken: refreshToken ?? undefined,
+        githubTokenExpiresAt: tokenExpiresAt ? parseInt(tokenExpiresAt, 10) : undefined,
+      })
         .then(() => {
           toast({ type: "success", message: `Connected as ${username}` });
           router.replace("/settings");

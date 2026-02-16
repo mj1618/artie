@@ -12,11 +12,10 @@ const SKIP_PATTERNS = [
   /^dist\//,
   /^build\//,
   /^\.next\//,
-  /\.lock$/,
-  /package-lock\.json$/,
+  // Keep lockfiles - needed for efficient pnpm installs
 ];
 
-const MAX_FILE_SIZE = 100_000;
+const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16 MiB
 const BATCH_SIZE = 20;
 
 function createOctokit(token?: string) {
@@ -25,9 +24,108 @@ function createOctokit(token?: string) {
   });
 }
 
+/**
+ * Refresh GitHub access token using refresh token.
+ * Returns new access token, refresh token, and expiry timestamp.
+ */
+async function refreshGithubToken(refreshToken: string): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+} | null> {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    console.error("[refreshGithubToken] Missing GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET");
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error("[refreshGithubToken] GitHub error:", data.error, data.error_description);
+      return null;
+    }
+
+    if (!data.access_token) {
+      console.error("[refreshGithubToken] No access_token in response");
+      return null;
+    }
+
+    // expires_in is in seconds
+    const expiresAt = data.expires_in
+      ? Date.now() + data.expires_in * 1000
+      : undefined;
+
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token ?? refreshToken,
+      expiresAt: expiresAt ?? Date.now() + 8 * 60 * 60 * 1000, // Default 8 hours if not provided
+    };
+  } catch (err) {
+    console.error("[refreshGithubToken] Failed to refresh token:", err);
+    return null;
+  }
+}
+
+/**
+ * Get the user's GitHub token, refreshing if expired.
+ * Returns undefined if no token or refresh fails.
+ */
 async function getUserGithubToken(ctx: ActionCtx): Promise<string | undefined> {
   const profile = await ctx.runQuery(api.users.getProfile);
-  return profile?.githubAccessToken ?? undefined;
+
+  if (!profile?.githubAccessToken) {
+    return undefined;
+  }
+
+  // Check if token is expired (with 5 minute buffer)
+  const expiresAt = profile.githubTokenExpiresAt;
+  const bufferMs = 5 * 60 * 1000; // 5 minutes
+
+  if (expiresAt && Date.now() > expiresAt - bufferMs) {
+    console.log("[getUserGithubToken] Token expired or expiring soon, attempting refresh");
+
+    if (!profile.githubRefreshToken) {
+      console.warn("[getUserGithubToken] No refresh token available");
+      return undefined;
+    }
+
+    const newTokens = await refreshGithubToken(profile.githubRefreshToken);
+
+    if (!newTokens) {
+      console.error("[getUserGithubToken] Failed to refresh token");
+      return undefined;
+    }
+
+    // Update the stored tokens
+    await ctx.runMutation(api.users.updateGithubTokens, {
+      githubAccessToken: newTokens.accessToken,
+      githubRefreshToken: newTokens.refreshToken,
+      githubTokenExpiresAt: newTokens.expiresAt,
+    });
+
+    console.log("[getUserGithubToken] Token refreshed successfully");
+    return newTokens.accessToken;
+  }
+
+  return profile.githubAccessToken;
 }
 
 function shouldSkip(path: string, size?: number): boolean {
@@ -77,8 +175,15 @@ async function fetchFileBatch(
             content: Buffer.from(data.content, "base64").toString("utf-8"),
           };
         }
+        // File exists but content not available or wrong encoding
+        console.warn(
+          `[fetchFileBatch] Skipping file (no base64 content): ${path}`,
+          "content" in data ? `encoding=${data.encoding}` : "no content field",
+        );
         return null;
-      } catch {
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[fetchFileBatch] Failed to fetch file: ${path}`, message);
         return null;
       }
     }),
@@ -182,26 +287,129 @@ export const fetchFileContents = action({
 export const fetchRepoForWebContainer = action({
   args: {
     repoId: v.id("repos"),
+    branch: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const repo = await getRepo(ctx, args.repoId);
     const token = await getUserGithubToken(ctx);
     const octokit = createOctokit(token);
 
-    // 1. Get the tree
-    const { data: treeData } = await octokit.git.getTree({
-      owner: repo.githubOwner,
-      repo: repo.githubRepo,
-      tree_sha: repo.defaultBranch,
-      recursive: "1",
-    });
+    let targetBranch = args.branch ?? repo.defaultBranch;
 
-    const filePaths = treeData.tree
+    console.log(
+      `[fetchRepoForWebContainer] Fetching ${repo.githubOwner}/${repo.githubRepo}@${targetBranch}`,
+    );
+    console.log(
+      `[fetchRepoForWebContainer] Using token: ${token ? "yes (length: " + token.length + ")" : "no (using GITHUB_TOKEN env var)"}`,
+    );
+
+    // Helper to resolve branch name to commit SHA (ensures we get latest, not cached)
+    const resolveCommitSha = async (branch: string): Promise<string> => {
+      const { data: refData } = await octokit.git.getRef({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        ref: `heads/${branch}`,
+      });
+      return refData.object.sha;
+    };
+
+    // 1. Get the tree - if requested branch doesn't exist, fall back to default
+    // We resolve branch to commit SHA first to avoid GitHub API caching issues
+    let treeData;
+    try {
+      const commitSha = await resolveCommitSha(targetBranch);
+      console.log(
+        `[fetchRepoForWebContainer] Resolved ${targetBranch} to commit ${commitSha.slice(0, 7)}`,
+      );
+      const response = await octokit.git.getTree({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        tree_sha: commitSha,
+        recursive: "1",
+      });
+      treeData = response.data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+
+      // If requested branch doesn't exist on GitHub, fall back to default branch
+      // This happens when a session is created with a new branch that hasn't been pushed yet
+      if (targetBranch !== repo.defaultBranch && message.includes("Not Found")) {
+        console.log(
+          `[fetchRepoForWebContainer] Branch '${targetBranch}' not found on GitHub, falling back to default branch '${repo.defaultBranch}'`,
+        );
+        targetBranch = repo.defaultBranch;
+        try {
+          const fallbackCommitSha = await resolveCommitSha(repo.defaultBranch);
+          console.log(
+            `[fetchRepoForWebContainer] Resolved ${repo.defaultBranch} to commit ${fallbackCommitSha.slice(0, 7)}`,
+          );
+          const fallbackResponse = await octokit.git.getTree({
+            owner: repo.githubOwner,
+            repo: repo.githubRepo,
+            tree_sha: fallbackCommitSha,
+            recursive: "1",
+          });
+          treeData = fallbackResponse.data;
+        } catch (fallbackErr) {
+          const fallbackMessage = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+          console.error(
+            `[fetchRepoForWebContainer] Failed to get tree for default branch ${repo.githubOwner}/${repo.githubRepo}@${repo.defaultBranch}:`,
+            fallbackMessage,
+          );
+          throw new Error(
+            `Repository ${repo.githubOwner}/${repo.githubRepo} not found or you don't have access to it. ` +
+            `Branch: ${repo.defaultBranch}. Error: ${fallbackMessage}`,
+          );
+        }
+      } else {
+        console.error(
+          `[fetchRepoForWebContainer] Failed to get tree for ${repo.githubOwner}/${repo.githubRepo}@${targetBranch}:`,
+          message,
+        );
+        throw new Error(
+          `Repository ${repo.githubOwner}/${repo.githubRepo} not found or you don't have access to it. ` +
+          `Branch: ${targetBranch}. Error: ${message}`,
+        );
+      }
+    }
+
+    const allBlobs = treeData.tree.filter(
+      (item) => item.type === "blob" && item.path,
+    );
+    const skippedFiles: { path: string; reason: string }[] = [];
+
+    const filePaths = allBlobs
       .filter((item) => {
-        if (item.type !== "blob" || !item.path) return false;
-        return !shouldSkip(item.path, item.size ?? undefined);
+        const path = item.path!;
+        const size = item.size ?? undefined;
+
+        // Check each skip reason individually for better logging
+        for (const pattern of SKIP_PATTERNS) {
+          if (pattern.test(path)) {
+            skippedFiles.push({ path, reason: `matches pattern ${pattern}` });
+            return false;
+          }
+        }
+        if (size && size > MAX_FILE_SIZE) {
+          skippedFiles.push({
+            path,
+            reason: `exceeds max size (${size} > ${MAX_FILE_SIZE})`,
+          });
+          return false;
+        }
+        return true;
       })
       .map((item) => item.path!);
+
+    console.log(
+      `[fetchRepoForWebContainer] Tree contains ${allBlobs.length} files, fetching ${filePaths.length}, skipping ${skippedFiles.length}`,
+    );
+    if (skippedFiles.length > 0 && skippedFiles.length <= 20) {
+      console.log(
+        `[fetchRepoForWebContainer] Skipped files:`,
+        skippedFiles.map((f) => `${f.path} (${f.reason})`).join(", "),
+      );
+    }
 
     // 2. Fetch file contents in parallel batches
     const fileContents: Record<string, string> = {};
@@ -211,11 +419,22 @@ export const fetchRepoForWebContainer = action({
         octokit,
         repo.githubOwner,
         repo.githubRepo,
-        repo.defaultBranch,
+        targetBranch,
         batch,
       );
       Object.assign(fileContents, batchResults);
     }
+
+    const fetchedCount = Object.keys(fileContents).length;
+    const failedCount = filePaths.length - fetchedCount;
+    if (failedCount > 0) {
+      console.warn(
+        `[fetchRepoForWebContainer] Failed to fetch ${failedCount} files (see fetchFileBatch errors above)`,
+      );
+    }
+    console.log(
+      `[fetchRepoForWebContainer] Successfully fetched ${fetchedCount} files`,
+    );
 
     // 3. Build WebContainer FileSystemTree structure
     const fsTree: Record<string, unknown> = {};
@@ -237,7 +456,16 @@ export const fetchRepoForWebContainer = action({
       current[fileName] = { file: { contents: content } };
     }
 
-    return fsTree;
+    // Return metadata about what branch was actually used
+    // This helps the frontend decide whether to cache (don't cache fallback results)
+    const requestedBranch = args.branch ?? repo.defaultBranch;
+    const didFallback = targetBranch !== requestedBranch;
+
+    return {
+      files: fsTree,
+      resolvedBranch: targetBranch,
+      didFallback,
+    };
   },
 });
 

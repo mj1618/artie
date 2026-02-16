@@ -90,7 +90,9 @@
     "./builds/github-repo-browser/types/**/*.ts",
     "./builds/github-repo-browser/dev/types/**/*.ts",
     "./builds/fix-ai-tokens/types/**/*.ts",
-    "./builds/fix-ai-tokens/dev/types/**/*.ts"
+    "./builds/fix-ai-tokens/dev/types/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

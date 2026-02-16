@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:all": "npm-run-all2 --parallel dev:next dev:convex",
     "dev:next": "next dev",
     "dev:convex": "convex dev",
     "build": "next build",
@@ -15,6 +16,7 @@
     "@ai-sdk/google": "^3.0.29",
     "@ai-sdk/openai": "^3.0.29",
     "@auth/core": "^0.37.4",
+    "@codesandbox/sandpack-react": "^2.20.0",
     "@convex-dev/auth": "^0.0.90",
     "@octokit/rest": "^22.0.1",
     "@webcontainer/api": "^1.6.1",
@@ -37,6 +39,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "npm-run-all": "^4.1.5",
+    "npm-run-all2": "^8.0.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

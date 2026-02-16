@@ -43,6 +43,16 @@ export async function GET(req: NextRequest) {
   redirectUrl.searchParams.set("github_token", tokenData.access_token);
   redirectUrl.searchParams.set("github_username", githubUser.login);
 
+  // GitHub Apps with expiring tokens return refresh_token and expires_in
+  if (tokenData.refresh_token) {
+    redirectUrl.searchParams.set("github_refresh_token", tokenData.refresh_token);
+  }
+  if (tokenData.expires_in) {
+    // Calculate expiration timestamp (expires_in is in seconds)
+    const expiresAt = Date.now() + tokenData.expires_in * 1000;
+    redirectUrl.searchParams.set("github_token_expires_at", expiresAt.toString());
+  }
+
   const response = NextResponse.redirect(redirectUrl);
   response.cookies.delete("github_oauth_state");
   return response;

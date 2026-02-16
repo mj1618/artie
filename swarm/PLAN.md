@@ -20,6 +20,11 @@ Artie is a web application that allows non-technical users to preview and modify
 5. Owner configures per-repo settings:
    - **Push to main**: Changes commit directly to the default branch
    - **Create PR**: Changes go to a new branch with a pull request
+   - **Runtime**: WebContainers (browser) or Fly.io Sprite (server)
+6. Owner can review open PRs within Artie:
+   - View PRs in live preview mode (WebContainers)
+   - Review changes with diff + preview side-by-side
+   - Approve and merge PRs directly from the app
 
 ---
 
@@ -33,7 +38,7 @@ Artie is a web application that allows non-technical users to preview and modify
 | Authentication | Convex Auth (username/password) |
 | GitHub Integration | Octokit (via Convex actions) |
 | LLM | Vercel AI SDK + Anthropic Claude |
-| Browser Runtime | WebContainers API |
+| Runtime (per-project) | WebContainers API or Fly.io Sprite |
 | Hosting | Vercel (frontend) + Convex (backend) |
 
 ---
@@ -51,8 +56,8 @@ Artie is a web application that allows non-technical users to preview and modify
 
 ### 2. Team Management
 
-- Owner can invite members by email
-- Members receive invite, create account, join team
+- Owner generates invite links to share with potential members
+- Members use the invite link to create an account and join the team
 - Owner can remove members
 - Owner can transfer ownership (stretch goal)
 
@@ -64,6 +69,7 @@ Artie is a web application that allows non-technical users to preview and modify
 - Store repo metadata and access tokens securely
 - Per-repo configuration:
   - Push strategy (direct to main vs PR)
+  - Runtime environment (WebContainers vs Fly.io Sprite)
   - Default branch override (optional)
 
 ### 4. Live Preview (WebContainers)
@@ -85,6 +91,16 @@ Artie is a web application that allows non-technical users to preview and modify
 - User can approve or reject changes
 - Approved changes are committed to GitHub
 
+#### Conversation Management
+
+Conversations are tied to features/branches to enable iterative development:
+
+- **Feature-based conversations**: Each conversation is associated with a specific feature branch
+- **Start new conversation**: Users can start a new conversation for a new feature, which creates a new branch
+- **Resume work**: When starting a new conversation on an existing feature/branch, work continues where it left off
+- **Branch context**: The conversation history and file state persist with the branch
+- **Multiple conversations per feature**: Users can have multiple chat sessions for the same feature branch, maintaining context across sessions
+
 ### 6. GitHub Sync
 
 - Pull latest code from GitHub on session start
@@ -93,7 +109,16 @@ Artie is a web application that allows non-technical users to preview and modify
   - **PR mode**: Create branch, commit, open PR with AI-generated description
 - Handle merge conflicts gracefully (notify user, offer to pull latest)
 
-### 7. Custom LLM Provider
+### 7. PR Review & Approval (Owner)
+
+- Owner can view all open PRs for connected repos within Artie
+- PRs are loaded in preview mode (WebContainers) so owners can see the changes live
+- Owner can review the PR diff alongside the live preview
+- Owner can approve and merge PRs directly from within the application
+- Supports merge, squash merge, and rebase merge strategies
+- After merge, option to delete the source branch
+
+### 8. Custom LLM Provider
 
 Owners can configure their own LLM API keys instead of using the platform's default:
 
@@ -107,7 +132,7 @@ Owners can configure their own LLM API keys instead of using the platform's defa
 - Fallback to platform default if no custom key configured
 - Usage tracking per team for billing/monitoring purposes
 
-### 8. Convex Backend Support (WebContainers)
+### 9. Convex Backend Support (WebContainers)
 
 When a connected repository uses Convex, Artie runs a local Convex instance inside the WebContainer:
 
@@ -117,6 +142,81 @@ When a connected repository uses Convex, Artie runs a local Convex instance insi
 - **Schema & Functions**: AI can modify Convex schema, queries, mutations, and actions
 - **Data Seeding**: Option to seed test data for previews
 - Enables non-technical users to build and modify full-stack applications
+
+### 10. External Convex Application Connection
+
+Users can connect an existing Convex application to their project. **Convex applications MUST run on Fly.io** (not WebContainers) due to the need for a persistent backend environment.
+
+- **Connection Flow**:
+  1. User selects "Connect Convex Application" for their project
+  2. User provides their Convex project URL or deployment name
+  3. User provides a **Fly.io deploy key** for their Fly.io account
+  4. Artie configures the project to deploy on Fly.io with the Convex backend
+
+- **Fly.io Deployment**:
+  - External Convex connections require Fly.io runtime (not WebContainers)
+  - User's deploy key is used to provision and manage Fly.io Sprites
+  - Deploy keys are stored encrypted and used for automated deployments
+  - Full Linux environment supports Convex CLI and dependencies
+
+- **Why Fly.io is Required**:
+  - WebContainers cannot maintain persistent connections to external Convex deployments
+  - Fly.io provides stable, server-side execution for backend operations
+  - Deploy keys enable automated provisioning without manual intervention
+
+### 11. Create Application from Template
+
+Users can create a new application directly within Artie from pre-built templates, without needing to connect external repositories.
+
+#### Available Templates
+
+| Template | Description | Runtime |
+|----------|-------------|---------|
+| **Next.js + Convex** | Full-stack web app with Convex backend | Fly.io (required) |
+
+*More templates may be added in the future.*
+
+#### Template Creation Flow
+
+1. **User initiates template creation**:
+   - User clicks "Create from Template" in the dashboard
+   - Selects "Next.js + Convex" template
+   - Enters a project name (used as Convex slug and project identifier)
+
+2. **Convex project provisioning** (using `CONVEX_ACCESS_TOKEN`):
+   - Artie checks if the slug is available via Convex API
+   - If available, creates a new Convex project with that slug
+   - Generates a Convex deploy key for the new project
+
+3. **Fly.io deployment setup**:
+   - User provides their Fly.io deploy key (or uses one already on file)
+   - Artie injects the Convex deploy key as an environment variable in Fly.io
+   - Fly.io Sprite is provisioned for the new project
+
+4. **Project initialization**:
+   - Template files are loaded into the Fly.io environment
+   - `npm install` runs to install dependencies
+   - Convex schema and functions are deployed to the new Convex project
+   - Project is ready for AI-assisted development
+
+#### Backend Projects Require Fly.io
+
+Any template with a backend component (like Convex) **must be deployed on Fly.io**:
+- WebContainers are suitable for frontend-only templates
+- Full-stack templates with Convex require server-side execution
+- Fly.io enables persistent backend processes and database connections
+
+#### Environment Variables
+
+The template system uses `CONVEX_ACCESS_TOKEN` (platform-level) to:
+- Query Convex API to check slug availability
+- Create new Convex projects programmatically
+- Generate deploy keys for created projects
+
+User-provided Fly.io deploy keys enable:
+- Provisioning Fly.io Sprites for their projects
+- Injecting Convex deploy keys as environment variables
+- Managing deployment lifecycle
 
 ---
 
@@ -153,13 +253,15 @@ teamMembers: {
   joinedAt?: number,
 }
 
-// pending invites
-invites: {
+// invite links
+inviteLinks: {
   teamId: Id<"teams">,
-  email: string,
-  invitedBy: Id<"users">,
+  code: string,           // unique invite code for URL
+  createdBy: Id<"users">,
   createdAt: number,
-  expiresAt: number,
+  expiresAt?: number,     // optional expiration
+  maxUses?: number,       // optional usage limit
+  useCount: number,       // how many times used
 }
 
 // connected repositories
@@ -170,17 +272,58 @@ repos: {
   githubUrl: string,
   defaultBranch: string,
   pushStrategy: "direct" | "pr",
+  // Runtime selection (per-project)
+  runtime: "webcontainer" | "flyio-sprite",
   connectedBy: Id<"users">,
   connectedAt: number,
   // Auto-detected features
   hasConvex?: boolean,      // true if convex/ directory detected
   projectType?: string,     // "next", "vite", "cra", etc.
+  // External Convex connection (requires Fly.io)
+  externalConvexUrl?: string,     // Connected Convex deployment URL
+  externalConvexDeployment?: string, // Convex deployment name
+}
+
+// template-created projects (not connected to GitHub)
+templateProjects: {
+  teamId: Id<"teams">,
+  name: string,                     // Project display name
+  slug: string,                     // Convex project slug
+  template: "nextjs-convex",        // Template used
+  createdBy: Id<"users">,
+  createdAt: number,
+  // Convex project details
+  convexProjectId: string,          // Convex project identifier
+  convexDeploymentUrl: string,      // Convex deployment URL
+  convexDeployKey: string,          // Encrypted deploy key for Convex
+  // Fly.io deployment
+  flyioAppName: string,             // Fly.io app name
+  flyioDeployKey: string,           // Encrypted user's Fly.io deploy key
+  // Status
+  status: "provisioning" | "active" | "error",
+  errorMessage?: string,
+}
+
+// user Fly.io deploy keys (reusable across projects)
+flyioDeployKeys: {
+  teamId: Id<"teams">,
+  userId: Id<"users">,
+  name: string,                     // User-friendly name for the key
+  encryptedKey: string,             // Encrypted Fly.io deploy key
+  createdAt: number,
+  lastUsedAt?: number,
 }
 
 // chat sessions (for history/context)
+// Sessions are tied to feature branches for iterative development
 sessions: {
   repoId: Id<"repos">,
   userId: Id<"users">,
+  // Feature/branch association
+  featureName: string,            // Human-readable feature name
+  branchName: string,             // Git branch name (e.g., "feature/update-hero")
+  branchCreatedBySession: boolean, // Whether this session created the branch
+  // Timestamps
   createdAt: number,
   lastActiveAt: number,
 }
@@ -222,8 +365,12 @@ artie/
 │   │   │   └── page.tsx      # Connect/manage repos
 │   │   ├── settings/
 │   │   │   └── page.tsx      # Account settings
-│   │   └── llm-settings/
-│   │       └── page.tsx      # Custom LLM provider config (owner only)
+│   │   ├── llm-settings/
+│   │   │   └── page.tsx      # Custom LLM provider config (owner only)
+│   │   └── pull-requests/
+│   │       ├── page.tsx      # List open PRs for all connected repos
+│   │       └── [prId]/
+│   │           └── page.tsx  # PR review with preview + diff (owner)
 │   └── (workspace)/
 │       └── [repoId]/
 │           └── page.tsx      # Main workspace (chat + preview)
@@ -308,15 +455,22 @@ artie/
 
 1. **Landing Page**: Hero, features, CTA to sign up
 2. **Dashboard**: List of connected repos, quick actions
-3. **Team Page**: Member list, invite form, pending invites
-4. **Repo Settings**: Push strategy, disconnect repo
+3. **Team Page**: Member list, generate/manage invite links
+4. **Repo Settings**: Push strategy, runtime selection, disconnect repo
 5. **Workspace**: Main chat + preview interface
+6. **PR List**: Open PRs across all connected repos (owner)
+7. **PR Review**: Live preview + diff viewer + approve/merge controls (owner)
 
 ### Design Principles
 
+**UX is a major selling point of the platform.** Good user experience is critical to Artie's success and differentiation.
+
 - Clean, minimal interface suitable for non-technical users
+- **Team member experience must be extremely non-tech friendly** - members should never feel overwhelmed by technical concepts
 - Clear status indicators (loading, building, error states)
 - Friendly error messages (no stack traces shown to users)
+- Intuitive workflows that guide users naturally
+- Minimize cognitive load - hide complexity, surface only what's needed
 - Mobile-responsive (though primary use is desktop)
 
 ---
@@ -336,7 +490,7 @@ artie/
 
 - [ ] GitHub OAuth flow for owners
 - [ ] Repository listing and selection
-- [ ] Team creation and member invites
+- [ ] Team creation and invite link generation
 - [ ] Repo settings (push strategy)
 - [ ] Dashboard with connected repos
 
@@ -361,15 +515,32 @@ artie/
 - [ ] Streaming responses
 - [ ] Change detection and preview
 
-### Phase 5: GitHub Sync
+### Phase 5: GitHub Sync & PR Review
 
 - [ ] Apply changes to WebContainer filesystem
 - [ ] Commit changes to GitHub (direct mode)
 - [ ] Branch creation and PR flow
 - [ ] Change approval workflow
 - [ ] Conflict detection
+- [ ] PR list view for owners (open PRs for connected repos)
+- [ ] PR preview in WebContainers (load PR branch for live preview)
+- [ ] PR diff viewer alongside live preview
+- [ ] PR approval and merge from within app (merge/squash/rebase)
+- [ ] Post-merge branch cleanup option
 
-### Phase 6: Polish & Launch
+### Phase 6: External Convex & Templates
+
+- [ ] External Convex connection UI
+- [ ] Fly.io deploy key management (add/remove keys)
+- [ ] Convex API integration for slug availability check
+- [ ] Convex project creation via API (using CONVEX_ACCESS_TOKEN)
+- [ ] Template selection UI in dashboard
+- [ ] Next.js + Convex template implementation
+- [ ] Convex deploy key generation and injection into Fly.io
+- [ ] Template project provisioning workflow
+- [ ] Template project management (view, delete)
+
+### Phase 7: Polish & Launch
 
 - [ ] Error handling and edge cases
 - [ ] Loading states and animations
@@ -491,6 +662,87 @@ export async function setupConvexDev(container: WebContainer) {
 - Cache GitHub API responses where appropriate
 - Consider WebContainer reuse across sessions
 
+### Convex Project Creation API
+
+Using `CONVEX_ACCESS_TOKEN` to programmatically manage Convex projects:
+
+```typescript
+// lib/convex-api.ts
+const CONVEX_API_BASE = "https://api.convex.dev";
+
+export async function checkSlugAvailable(slug: string): Promise<boolean> {
+  const response = await fetch(`${CONVEX_API_BASE}/projects/${slug}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.CONVEX_ACCESS_TOKEN}`,
+    },
+  });
+  return response.status === 404; // 404 means available
+}
+
+export async function createConvexProject(slug: string, teamId: string) {
+  const response = await fetch(`${CONVEX_API_BASE}/projects`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.CONVEX_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ slug, teamId }),
+  });
+  return response.json();
+}
+
+export async function createDeployKey(projectId: string): Promise<string> {
+  const response = await fetch(
+    `${CONVEX_API_BASE}/projects/${projectId}/deploy-keys`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.CONVEX_ACCESS_TOKEN}`,
+      },
+    }
+  );
+  const { deployKey } = await response.json();
+  return deployKey;
+}
+```
+
+### Fly.io Deploy Key Integration
+
+Injecting Convex deploy keys into Fly.io Sprites:
+
+```typescript
+// lib/flyio.ts
+export async function provisionSpriteWithConvex(
+  flyioDeployKey: string,
+  convexDeployKey: string,
+  appName: string
+) {
+  // Create Fly.io app with Convex environment variables
+  const response = await fetch("https://api.fly.io/v1/apps", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${flyioDeployKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      app_name: appName,
+      env: {
+        CONVEX_DEPLOY_KEY: convexDeployKey,
+        // Other env vars as needed
+      },
+    }),
+  });
+  return response.json();
+}
+```
+
+**Security considerations for deploy keys**:
+- All deploy keys (Fly.io and Convex) are encrypted at rest using AES-256
+- Keys are only decrypted server-side in Convex actions
+- Deploy keys have minimal required permissions
+- Users can revoke their Fly.io deploy keys at any time
+- Convex deploy keys are project-scoped and can be rotated
+
 ---
 
 ## Environment Variables
@@ -500,6 +752,10 @@ export async function setupConvexDev(container: WebContainer) {
 CONVEX_DEPLOYMENT=
 NEXT_PUBLIC_CONVEX_URL=
 
+# Convex Access Token (for template project creation)
+# Used to create new Convex projects and generate deploy keys
+CONVEX_ACCESS_TOKEN=
+
 # GitHub OAuth (for owner repo connection)
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
@@ -507,14 +763,72 @@ GITHUB_CLIENT_SECRET=
 # Default LLM (platform fallback when no custom key)
 ANTHROPIC_API_KEY=
 
-# Encryption key for storing user API keys
+# Encryption key for storing user API keys and deploy keys
 API_KEY_ENCRYPTION_SECRET=
 
 # Optional
 NEXT_PUBLIC_APP_URL=
+
+# Fly.io Sprite deployment (alternative runtime)
+FLYIO_TOKEN=
 ```
 
 Note: Individual team LLM API keys (OpenAI, Anthropic, Google) are stored encrypted in the database, not as environment variables.
+
+Note: User-provided Fly.io deploy keys and generated Convex deploy keys are stored encrypted in the database per-project/per-team.
+
+---
+
+## Runtime Options: WebContainers vs Fly.io Sprite
+
+Artie supports **two runtime environments** for running application previews. **Users choose the runtime per-project** based on their needs.
+
+### Per-Project Runtime Selection
+
+When connecting a repository, owners select which runtime to use:
+
+- **WebContainers (default)**: Browser-based execution, instant startup, free
+- **Fly.io Sprite**: Server-side execution, supports native dependencies
+
+This setting can be changed at any time in repo settings.
+
+### WebContainers
+
+Best for:
+- JavaScript/TypeScript projects (Next.js, Vite, React, etc.)
+- Quick iterations with instant preview
+- Projects without native dependencies
+- Offline-capable development
+
+### Fly.io Sprite
+
+Best for:
+- Projects requiring native dependencies (Python, Go, Rust, etc.)
+- Applications exceeding browser resource limits
+- Full backend services (databases, queues, etc.)
+- Long-running processes or background jobs
+
+### Configuration
+
+Set the `FLYIO_TOKEN` environment variable to enable Fly.io Sprite as a runtime option.
+
+### How Fly.io Sprite Works
+
+1. **On-demand provisioning**: When a user starts a preview, Artie spins up a Fly.io Sprite instance
+2. **Isolated environments**: Each preview gets its own isolated Sprite
+3. **Auto-teardown**: Sprites are automatically torn down after inactivity
+4. **Full environment**: Sprites support full Linux environments with native dependencies
+
+### Comparison
+
+| Feature | WebContainers | Fly.io Sprite |
+|---------|---------------|---------------|
+| Startup time | ~5-10 seconds | ~30-60 seconds |
+| Cost | Free (browser) | Per-minute billing |
+| Native deps | No | Yes |
+| Resource limits | Browser memory | Configurable |
+| Offline support | Yes | No |
+| Best for | JS/TS projects | Full-stack / native |
 
 ---
 
@@ -529,7 +843,7 @@ Note: Individual team LLM API keys (OpenAI, Anthropic, Google) are stored encryp
 
 ## Future Enhancements
 
-- Project templates for quick starts
+- Additional project templates (Vite + Convex, SvelteKit + Convex, etc.)
 - Version history / rollback
 - Collaborative editing (multiple users same session)
 - Custom domain previews
@@ -537,6 +851,7 @@ Note: Individual team LLM API keys (OpenAI, Anthropic, Google) are stored encryp
 - Additional LLM providers (Mistral, Cohere, local models via Ollama)
 - Convex cloud deployment from preview (promote local to production)
 - Usage analytics and cost tracking for custom LLM keys
+- GitHub repo creation from template projects (export template project to GitHub)
 
 ---
 
@@ -549,3 +864,13 @@ Reference repositories demonstrating supported project types:
 | Next.js + Convex | [github.com/get-convex/convex-nextjs-template](https://github.com/get-convex/convex-nextjs-template) | Full-stack template with authentication |
 | Vite + React | [github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) | Modern React SPA |
 | Next.js Basic | [github.com/vercel/next.js/tree/canary/examples/hello-world](https://github.com/vercel/next.js/tree/canary/examples/hello-world) | Minimal Next.js setup |
+
+## Built-in Templates
+
+Templates available for creating new projects directly within Artie:
+
+| Template | Base | Backend | Runtime | Description |
+|----------|------|---------|---------|-------------|
+| **Next.js + Convex** | [convex-nextjs-template](https://github.com/get-convex/convex-nextjs-template) | Convex | Fly.io (required) | Full-stack web application with Convex backend, auth, and real-time data |
+
+**Note**: All templates with backend components (Convex) require Fly.io deployment. Users must provide a Fly.io deploy key to create projects from these templates.

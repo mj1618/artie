@@ -24,6 +24,8 @@ interface MessageBubbleProps {
   repoId: Id<"repos">;
   fileChangeId?: Id<"fileChanges">;
   streaming?: boolean;
+  sessionBranch?: string;
+  onRetryFileChange?: (fileChangeId: Id<"fileChanges">) => void;
 }
 
 function formatTime(timestamp: number): string {
@@ -48,6 +50,8 @@ export function MessageBubble({
   repoId,
   fileChangeId,
   streaming,
+  sessionBranch,
+  onRetryFileChange,
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const [showPushDialog, setShowPushDialog] = useState(false);
@@ -116,6 +120,7 @@ export function MessageBubble({
                     fileChangeId={fileChangeId}
                     files={changes.files}
                     messageContent={content}
+                    sessionBranch={sessionBranch}
                     onClose={() => setShowPushDialog(false)}
                   />
                 )}
@@ -151,6 +156,8 @@ export function MessageBubble({
             fileChangeId={fileChangeData._id}
             reverted={fileChangeData.reverted ?? false}
             committed={changes?.committed}
+            error={fileChangeData.error}
+            onRetry={onRetryFileChange ? () => onRetryFileChange(fileChangeData._id) : undefined}
           />
         )}
       </div>

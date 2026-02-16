@@ -10,13 +10,17 @@
 
 import type * as ai from "../ai.js";
 import type * as auth from "../auth.js";
+import type * as deployKeys from "../deployKeys.js";
 import type * as fileChanges from "../fileChanges.js";
+import type * as flyioSprites from "../flyioSprites.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as projects from "../projects.js";
 import type * as sessions from "../sessions.js";
 import type * as teams from "../teams.js";
+import type * as templateActions from "../templateActions.js";
+import type * as templates from "../templates.js";
 import type * as users from "../users.js";
 
 import type {
@@ -28,13 +32,17 @@ import type {
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   auth: typeof auth;
+  deployKeys: typeof deployKeys;
   fileChanges: typeof fileChanges;
+  flyioSprites: typeof flyioSprites;
   github: typeof github;
   http: typeof http;
   messages: typeof messages;
   projects: typeof projects;
   sessions: typeof sessions;
   teams: typeof teams;
+  templateActions: typeof templateActions;
+  templates: typeof templates;
   users: typeof users;
 }>;
 

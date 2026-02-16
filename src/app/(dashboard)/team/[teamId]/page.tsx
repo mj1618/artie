@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, notFound } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
@@ -627,23 +627,7 @@ export default function TeamManagementPage() {
     );
   }
 
-  if (team === null) {
-    return (
-      <div className="mx-auto max-w-3xl px-6 py-10">
-        <Link
-          href="/home"
-          className="text-sm text-zinc-400 hover:text-zinc-200"
-        >
-          &larr; Back to dashboard
-        </Link>
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-400">
-            Team not found or you don&apos;t have access.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (team === null) notFound();
 
   const isOwner = team.myRole === "owner";
 
@@ -690,6 +674,19 @@ export default function TeamManagementPage() {
                 <p className="font-medium text-zinc-200">LLM Settings</p>
                 <p className="mt-0.5 text-xs text-zinc-500">
                   Configure a custom AI provider and API key
+                </p>
+              </div>
+              <span className="text-zinc-500">&rarr;</span>
+            </Link>
+            <div className="border-t border-zinc-800" />
+            <Link
+              href={`/team/${teamId}/deploy-keys`}
+              className="flex items-center justify-between px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800/50"
+            >
+              <div>
+                <p className="font-medium text-zinc-200">Fly.io Deploy Keys</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Manage deploy keys for server-side runtime
                 </p>
               </div>
               <span className="text-zinc-500">&rarr;</span>
