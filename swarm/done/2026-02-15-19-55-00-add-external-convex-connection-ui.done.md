@@ -75,7 +75,7 @@ This section has its own save flow (separate from the Configuration form's Save 
 
 ### 4. Verify
 
-- Run `npm -s convex codegen` to regenerate types
+- Run `npx convex dev --once` to regenerate types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -95,7 +95,7 @@ This section has its own save flow (separate from the Configuration form's Save 
 6. Disconnecting clears both fields (with confirmation dialog)
 7. If runtime is WebContainer, the Connect button is disabled with a warning message
 8. Toast notifications for success/error
-9. `npm -s convex codegen` succeeds
+9. `npx convex dev --once` succeeds
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

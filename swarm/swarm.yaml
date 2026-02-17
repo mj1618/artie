@@ -9,13 +9,12 @@ tasks:
 
       ## Step 1: Understand Current State
 
-      - Read `swarm/PLAN.md` for the project plan and milestones
-      - Check `swarm/done/` for completed `.done.md` files — don't repeat work
-      - Browse `src/` and `convex/` to see what's built
+      - Read `swarm/PLAN.md` for an overview of the project
+      - Pick an epic `swarm/epics/{epicName}.todo.md` to work on next
 
       ## Step 2: Write the Next Task
 
-      Create `{YYYY-MM-DD-HH-MM-SS}-{taskName}.todo.md` in `swarm/todos/`.
+      Create `{YYYY-MM-DD-HH-MM-SS}-{taskName}.todo.md` in `swarm/todos/{epicName}/`.
 
       Keep tasks bite-sized (one component, one feature). Include:
       - What to build
@@ -30,7 +29,7 @@ tasks:
 
       ## Step 1: Pick Up Your Task
 
-      Find a `.todo.md` file in `swarm/todos/`. Read it, then rename it to `.processing.md`.
+      Find a `.todo.md` file in `swarm/todos/{epicName}/`. Read it, then rename it to `.processing.md`.
 
       ## Step 2: Implement
 
@@ -48,7 +47,9 @@ tasks:
       ## Step 4: Complete
 
       1. Append a summary to the `.processing.md` file (files changed, what was built)
-      2. Move it to `swarm/done/` and rename to `.done.md`
+      2. Rename it to `.done.md`
+      3. Update the epic in `swarm/epics/{epicName}.md` to reflect the new progress. If the Epic is complete, rename it to `.done.md`.
+
 
     depends_on: [planner]
 
@@ -60,7 +61,7 @@ tasks:
 
       ## Step 1: Find What Was Changed
 
-      Look in `swarm/done/` for the most recent `.done.md` file. Read it to see which files were created or modified.
+      Look in `swarm/todos/{epicName}/` for the most recent `.done.md` file. Read it to see which files were created or modified.
 
       ## Step 2: Check for Issues
 
@@ -79,10 +80,14 @@ tasks:
 
       Append a brief note to the `.done.md` file listing any fixes you made. If everything looked good, note that too.
 
+      ## Rename file to .reviewed.md
+
+      Rename the .done.md file to .reviewed.md
+
     depends_on: [developer]
 
 pipelines:
   main:
-    iterations: 100
-    parallelism: 4
+    iterations: 20
+    parallelism: 1
     tasks: [planner, developer, reviewer]

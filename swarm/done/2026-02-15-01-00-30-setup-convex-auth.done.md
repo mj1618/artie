@@ -94,7 +94,7 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
 
 ### 7. Run codegen and verify
 
-- Run `npm -s convex codegen` to generate types for new auth functions
+- Run `npx convex dev --once` to generate types for new auth functions
 - Run `npx tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -116,7 +116,7 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
 4. `convex/schema.ts` includes `authTables` alongside existing tables
 5. `convex/http.ts` registers auth HTTP routes
 6. `ConvexClientProvider` uses `ConvexAuthProvider` instead of basic `ConvexProvider`
-7. `npm -s convex codegen` completes successfully
+7. `npx convex dev --once` completes successfully
 8. `npx tsc -p tsconfig.json --noEmit` passes with no errors
 9. No existing functionality is broken — the app should still load and the demo session should still work (though it won't have real auth yet)
 

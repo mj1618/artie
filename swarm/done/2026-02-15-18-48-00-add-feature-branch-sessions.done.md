@@ -101,7 +101,7 @@ In the session list/sidebar within the workspace, show the feature name and bran
 
 ### 7. Run codegen and verify
 
-- Run `npm -s convex codegen` to regenerate types
+- Run `npx convex dev --once` to regenerate types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

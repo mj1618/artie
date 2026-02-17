@@ -207,5 +207,5 @@ Checks performed:
 - `src/components/preview/FileExplorer.tsx` — `"use client"` directive present (required — uses hooks). All imports resolve correctly (`@/lib/webcontainer/index`, `@/lib/webcontainer/files`). `treeLoadedRef` properly prevents double-loading in StrictMode. Effect cleanup sets `cancelled` flag to prevent state updates after unmount. Binary file detection handles edge cases correctly (files without extensions return `false` as expected). File content caching via `Map` ref works correctly. `TreeNode` recursive component properly handles expand/collapse state.
 - `src/components/preview/PreviewPanel.tsx` — `"use client"` directive present. `FileExplorer` imported and passed `containerReady={phase !== "idle" && phase !== "booting"}` — correctly allows file tree loading as soon as files are mounted (before dev server finishes). Removed old flat `<pre>` code view. Status bar ternary correctly mixes string and JSX returns (both valid ReactNode children).
 - `npm -s tsc -p tsconfig.json --noEmit` — passes with zero errors
-- `npm -s convex codegen` — passes
+- `npx convex dev --once` — passes
 - No fixes needed — all code is clean

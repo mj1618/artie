@@ -17,27 +17,27 @@ export default function LandingPage() {
 
   if (isLoading || isAuthenticated) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+      <div className="flex h-screen items-center justify-center bg-paper-100">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-paper-400 border-t-paper-700" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-paper-100 text-paper-900">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 md:px-12">
         <span className="text-xl font-bold tracking-tight">Artie</span>
         <div className="flex items-center gap-4">
           <Link
             href="/login"
-            className="text-sm text-zinc-400 hover:text-white"
+            className="text-sm text-paper-600 hover:text-paper-950"
           >
             Sign in
           </Link>
           <Link
             href="/signup"
-            className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+            className="rounded-md bg-paper-700 px-4 py-2 text-sm font-medium text-paper-50 hover:bg-paper-800"
           >
             Get started
           </Link>
@@ -48,11 +48,11 @@ export default function LandingPage() {
       <section className="mx-auto max-w-3xl px-6 pt-24 pb-20 text-center md:pt-32 md:pb-28">
         <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl">
           Build with AI,{" "}
-          <span className="bg-gradient-to-r from-zinc-200 to-zinc-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-paper-700 to-paper-500 bg-clip-text text-transparent">
             preview instantly
           </span>
         </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg text-zinc-400">
+        <p className="mx-auto mt-6 max-w-xl text-lg text-paper-600">
           Artie lets non-technical users modify web applications using plain
           English. Describe what you want, see the result in a live preview, and
           push changes to GitHub — no code required.
@@ -60,13 +60,13 @@ export default function LandingPage() {
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
             href="/signup"
-            className="rounded-md bg-zinc-100 px-6 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
+            className="rounded-md bg-paper-700 px-6 py-3 text-sm font-semibold text-paper-50 hover:bg-paper-800"
           >
             Get started
           </Link>
           <Link
             href="/login"
-            className="rounded-md border border-zinc-700 px-6 py-3 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white"
+            className="rounded-md border border-paper-400 px-6 py-3 text-sm font-medium text-paper-700 hover:border-paper-500 hover:text-paper-950"
           >
             Sign in
           </Link>
@@ -76,8 +76,8 @@ export default function LandingPage() {
       {/* Features */}
       <section className="mx-auto max-w-5xl px-6 pb-24">
         <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-zinc-800 text-zinc-300">
+          <div className="rounded-lg border border-paper-300 bg-paper-200 p-6 shadow-sm">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-paper-300 text-paper-700">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
@@ -87,17 +87,17 @@ export default function LandingPage() {
                 <path d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z" />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-zinc-100">
+            <h3 className="text-sm font-semibold text-paper-900">
               AI-Powered Editing
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+            <p className="mt-2 text-sm leading-relaxed text-paper-600">
               Describe changes in plain English. Artie&apos;s AI understands
               your intent and writes the code for you.
             </p>
           </div>
 
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-zinc-800 text-zinc-300">
+          <div className="rounded-lg border border-paper-300 bg-paper-200 p-6 shadow-sm">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-paper-300 text-paper-700">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
@@ -112,17 +112,17 @@ export default function LandingPage() {
                 />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-zinc-100">
+            <h3 className="text-sm font-semibold text-paper-900">
               Live Preview
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+            <p className="mt-2 text-sm leading-relaxed text-paper-600">
               See your changes instantly in a real browser preview. No waiting
               for builds or deployments.
             </p>
           </div>
 
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-zinc-800 text-zinc-300">
+          <div className="rounded-lg border border-paper-300 bg-paper-200 p-6 shadow-sm">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-paper-300 text-paper-700">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
@@ -136,10 +136,10 @@ export default function LandingPage() {
                 />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-zinc-100">
+            <h3 className="text-sm font-semibold text-paper-900">
               GitHub Integration
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+            <p className="mt-2 text-sm leading-relaxed text-paper-600">
               Changes sync directly to your repository. Review diffs, create
               branches, and push when you&apos;re ready.
             </p>
@@ -148,19 +148,19 @@ export default function LandingPage() {
       </section>
 
       {/* Footer CTA */}
-      <section className="border-t border-zinc-800 py-16 text-center">
-        <p className="text-sm text-zinc-500">
+      <section className="border-t border-paper-300 py-16 text-center">
+        <p className="text-sm text-paper-500">
           Ready to get started?{" "}
           <Link
             href="/signup"
-            className="text-zinc-100 underline hover:text-white"
+            className="text-paper-800 underline hover:text-paper-950"
           >
             Create an account
           </Link>{" "}
           or{" "}
           <Link
             href="/login"
-            className="text-zinc-100 underline hover:text-white"
+            className="text-paper-800 underline hover:text-paper-950"
           >
             sign in
           </Link>

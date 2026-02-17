@@ -39,7 +39,7 @@ export const addRepo = mutation({
     githubRepo: v.string(),
     defaultBranch: v.optional(v.string()),
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"))),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -99,7 +99,7 @@ export const updateRepo = mutation({
     repoId: v.id("repos"),
     pushStrategy: v.optional(v.union(v.literal("direct"), v.literal("pr"))),
     defaultBranch: v.optional(v.string()),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"))),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"))),
     externalConvexUrl: v.optional(v.string()),
     externalConvexDeployment: v.optional(v.string()),
     clearExternalConvex: v.optional(v.boolean()),
@@ -114,7 +114,7 @@ export const updateRepo = mutation({
     const updates: Partial<{
       pushStrategy: "direct" | "pr";
       defaultBranch: string;
-      runtime: "webcontainer" | "flyio-sprite" | "sandpack";
+      runtime: "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet";
       externalConvexUrl: string;
       externalConvexDeployment: string;
     }> = {};

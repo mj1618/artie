@@ -74,13 +74,13 @@ export function SplitPane({
     const tabClass = (active: boolean) =>
       `rounded px-2.5 py-1 text-xs font-medium transition-colors ${
         active
-          ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-          : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          ? "bg-paper-200 text-paper-950 dark:bg-paper-700 dark:text-paper-200"
+          : "text-paper-500 hover:text-paper-400 dark:text-paper-600 dark:hover:text-paper-800"
       }`;
 
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center gap-1 border-b border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
+        <div className="flex items-center gap-1 border-b border-paper-600 px-3 py-1.5 dark:border-paper-300">
           <button
             onClick={() => setActiveTab("left")}
             className={tabClass(activeTab === "left")}
@@ -117,14 +117,14 @@ export function SplitPane({
         onPointerDown={collapsed ? undefined : onDividerPointerDown}
         className={`group relative shrink-0 ${
           collapsed
-            ? "w-1 cursor-default bg-zinc-300 dark:bg-zinc-700"
-            : "w-1 cursor-col-resize bg-zinc-200 transition-colors hover:bg-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-500"
+            ? "w-1 cursor-default bg-paper-500 dark:bg-paper-400"
+            : "w-1 cursor-col-resize bg-paper-600 transition-colors hover:bg-paper-400 dark:bg-paper-400 dark:hover:bg-paper-500"
         }`}
       >
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex h-6 w-4 items-center justify-center rounded-sm bg-zinc-300 text-zinc-500 hover:bg-zinc-400 hover:text-zinc-700 dark:bg-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-600 dark:hover:text-zinc-200 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex h-6 w-4 items-center justify-center rounded-sm bg-paper-500 text-paper-500 hover:bg-paper-400 hover:text-paper-400 dark:bg-paper-400 dark:text-paper-600 dark:hover:bg-paper-400 dark:hover:text-paper-800 opacity-0 group-hover:opacity-100 transition-opacity"
           aria-label={collapsed ? "Expand chat panel" : "Collapse chat panel"}
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">

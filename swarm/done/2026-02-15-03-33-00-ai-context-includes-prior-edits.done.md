@@ -150,7 +150,7 @@ No change needed here — just verifying the logic is correct.
 
 ### 5. Run codegen and verify
 
-- Run `npm -s convex codegen` after adding the internal query
+- Run `npx convex dev --once` after adding the internal query
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -167,7 +167,7 @@ No change needed here — just verifying the logic is correct.
 3. Files the AI hasn't touched still show their original GitHub content
 4. Reverting a file change correctly stores the `originalContent` as the pre-edit version (not the original GitHub version from several edits ago)
 5. The `getCurrentFiles` query skips reverted file changes
-6. `npm -s convex codegen` runs without errors
+6. `npx convex dev --once` runs without errors
 7. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

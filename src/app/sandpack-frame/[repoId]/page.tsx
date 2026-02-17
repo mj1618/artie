@@ -233,14 +233,14 @@ function SandpackContent({
   const tabClass = (active: boolean) =>
     `rounded px-2.5 py-1 text-xs font-medium transition-colors ${
       active
-        ? "bg-zinc-900 text-white"
-        : "text-zinc-400 hover:text-zinc-200"
+        ? "bg-paper-200 text-paper-950"
+        : "text-paper-600 hover:text-paper-800"
     }`;
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950">
+    <div className="flex h-screen flex-col bg-paper-100">
       {/* Toggle bar */}
-      <div className="flex items-center gap-1 border-b border-zinc-800 px-3 py-1.5">
+      <div className="flex items-center gap-1 border-b border-paper-300 px-3 py-1.5">
         <button onClick={() => setView("preview")} className={tabClass(view === "preview")}>
           Preview
         </button>
@@ -264,11 +264,11 @@ function SandpackContent({
                 <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-zinc-200">Bundler connection timed out</h3>
-            <p className="max-w-sm text-center text-sm text-zinc-400">
+            <h3 className="text-base font-semibold text-paper-800">Bundler connection timed out</h3>
+            <p className="max-w-sm text-center text-sm text-paper-600">
               The Sandpack bundler took too long to respond.
             </p>
-            <button onClick={onRetry} className="rounded bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+            <button onClick={onRetry} className="rounded bg-paper-700 px-4 py-2 text-sm font-medium text-paper-50 hover:bg-paper-300">
               Retry
             </button>
           </div>
@@ -291,7 +291,7 @@ function SandpackContent({
       </div>
 
       {/* Status bar */}
-      <div className="border-t border-zinc-800 px-4 py-2">
+      <div className="border-t border-paper-300 px-4 py-2">
         <p className={`text-xs ${hasError ? "text-red-400" : isReady ? "text-emerald-400" : "text-yellow-400"}`}>
           {getStatusMessage()}
           {isInitializing && (
@@ -360,24 +360,24 @@ function SandpackFrameContent() {
 
   if (loading || !sandpackFiles) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-zinc-950">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
-        <p className="text-sm text-zinc-400">Loading files...</p>
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-paper-100">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-paper-400 border-t-white" />
+        <p className="text-sm text-paper-600">Loading files...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-zinc-950 p-6">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-paper-100 p-6">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-900/30">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-red-500">
             <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
           </svg>
         </div>
-        <h3 className="text-base font-semibold text-zinc-200">Failed to load files</h3>
-        <p className="max-w-sm text-center text-sm text-zinc-400">{error}</p>
-        <button onClick={handleRetry} className="rounded bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+        <h3 className="text-base font-semibold text-paper-800">Failed to load files</h3>
+        <p className="max-w-sm text-center text-sm text-paper-600">{error}</p>
+        <button onClick={handleRetry} className="rounded bg-paper-700 px-4 py-2 text-sm font-medium text-paper-50 hover:bg-paper-300">
           Retry
         </button>
       </div>

@@ -65,10 +65,10 @@ export function ChangePreview({
   const hasOriginals = files.some((f) => f.originalContent !== undefined);
 
   return (
-    <div className="mt-2 rounded border border-zinc-200 dark:border-zinc-700">
+    <div className="mt-2 rounded border border-paper-800 dark:border-paper-400">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs font-medium text-paper-400 hover:bg-paper-950 dark:text-paper-600 dark:hover:bg-paper-300"
       >
         <span>
           {files.length} file{files.length !== 1 ? "s" : ""} changed
@@ -93,7 +93,7 @@ export function ChangePreview({
       </button>
 
       {error && !reverted && (
-        <div className="flex items-center gap-2 border-t border-zinc-200 px-3 py-2 dark:border-zinc-700">
+        <div className="flex items-center gap-2 border-t border-paper-800 px-3 py-2 dark:border-paper-400">
           <div className="flex flex-1 items-center gap-2 text-sm text-amber-400">
             <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
@@ -112,32 +112,32 @@ export function ChangePreview({
       )}
 
       {expanded && (
-        <div className="border-t border-zinc-200 dark:border-zinc-700">
+        <div className="border-t border-paper-800 dark:border-paper-400">
           {files.map((file) => {
             const isFileExpanded = expandedFile === file.path;
             const lineCount = file.content.split("\n").length;
             return (
               <div
                 key={file.path}
-                className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800"
+                className="border-b border-paper-900 last:border-b-0 dark:border-paper-300"
               >
                 <button
                   onClick={() =>
                     setExpandedFile(isFileExpanded ? null : file.path)
                   }
-                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-paper-950 dark:hover:bg-paper-300"
                 >
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
+                  <span className="font-mono text-zinc-700 dark:text-paper-700">
                     {file.path}
                   </span>
-                  <span className="text-zinc-400">
+                  <span className="text-paper-600">
                     {lineCount} line{lineCount !== 1 ? "s" : ""}
                   </span>
                 </button>
                 {isFileExpanded && (
                   <div>
                     {file.originalContent !== undefined && (
-                      <div className="flex gap-1 border-b border-zinc-200 px-3 py-1 dark:border-zinc-700">
+                      <div className="flex gap-1 border-b border-paper-800 px-3 py-1 dark:border-paper-400">
                         <button
                           onClick={() =>
                             setViewMode((prev) => ({
@@ -147,8 +147,8 @@ export function ChangePreview({
                           }
                           className={`rounded px-2 py-0.5 text-xs font-medium ${
                             (viewMode[file.path] ?? "diff") === "diff"
-                              ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200"
-                              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                              ? "bg-paper-800 text-paper-200 dark:bg-paper-400 dark:text-paper-800"
+                              : "text-paper-500 hover:text-paper-300 dark:text-paper-600 dark:hover:text-paper-800"
                           }`}
                         >
                           Diff
@@ -162,15 +162,15 @@ export function ChangePreview({
                           }
                           className={`rounded px-2 py-0.5 text-xs font-medium ${
                             (viewMode[file.path] ?? "diff") === "full"
-                              ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200"
-                              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                              ? "bg-paper-800 text-paper-200 dark:bg-paper-400 dark:text-paper-800"
+                              : "text-paper-500 hover:text-paper-300 dark:text-paper-600 dark:hover:text-paper-800"
                           }`}
                         >
                           Full
                         </button>
                       </div>
                     )}
-                    <div className="max-h-64 overflow-auto bg-zinc-50 dark:bg-zinc-900">
+                    <div className="max-h-64 overflow-auto bg-paper-950 dark:bg-paper-200">
                       {file.originalContent !== undefined &&
                       (viewMode[file.path] ?? "diff") === "diff" ? (
                         <DiffView
@@ -179,7 +179,7 @@ export function ChangePreview({
                           filePath={file.path}
                         />
                       ) : (
-                        <pre className="px-3 py-2 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+                        <pre className="px-3 py-2 text-xs leading-relaxed text-zinc-700 dark:text-paper-700">
                           <code>{file.content}</code>
                         </pre>
                       )}
@@ -191,7 +191,7 @@ export function ChangePreview({
           })}
 
           {canRevert && hasOriginals && (
-            <div className="border-t border-zinc-200 px-3 py-2 dark:border-zinc-700">
+            <div className="border-t border-paper-800 px-3 py-2 dark:border-paper-400">
               <button
                 onClick={handleRevert}
                 disabled={reverting}

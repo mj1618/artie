@@ -37,13 +37,13 @@ export function ToastItem({
 }) {
   return (
     <div
-      className={`flex items-start gap-2 rounded-lg border ${borderColors[type]} bg-zinc-900 px-3 py-2.5 shadow-lg animate-toast-in`}
+      className={`flex items-start gap-2 rounded-lg border ${borderColors[type]} bg-paper-200 px-3 py-2.5 shadow-lg animate-toast-in`}
     >
       <span className="mt-0.5 shrink-0">{icons[type]}</span>
-      <p className="min-w-0 flex-1 text-sm text-zinc-200">{message}</p>
+      <p className="min-w-0 flex-1 text-sm text-paper-800">{message}</p>
       <button
         onClick={onDismiss}
-        className="shrink-0 rounded p-0.5 text-zinc-500 hover:text-zinc-300"
+        className="shrink-0 rounded p-0.5 text-paper-500 hover:text-paper-700"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
           <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />

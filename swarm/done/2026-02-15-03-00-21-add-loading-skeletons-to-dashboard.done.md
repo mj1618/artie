@@ -185,6 +185,6 @@ Checks performed:
 - Loading guards correctly check `=== undefined` (loading) vs `null` (not found) vs `[]` (empty)
 - `w-30` in Sidebar.tsx is valid in Tailwind v4 (auto-generated spacing scale)
 - `npm -s tsc -p tsconfig.json --noEmit` — passed
-- `npm -s convex codegen` — passed
+- `npx convex dev --once` — passed
 
 No fixes needed.

@@ -139,7 +139,7 @@ The dashboard doesn't currently have a relative time formatter. Either extract i
 
 ### 4. Run codegen and verify
 
-- Run `npm -s convex codegen` to regenerate types with the new query
+- Run `npx convex dev --once` to regenerate types with the new query
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

@@ -75,7 +75,7 @@ Actually, simplest approach: **leave Header unchanged**. Having Settings in both
 
 ### 4. Run codegen and verify
 
-- Run `npm -s convex codegen` (no schema changes, but good practice)
+- Run `npx convex dev --once` (no schema changes, but good practice)
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

@@ -173,7 +173,7 @@ export const checkSlugAvailable = query({
 
 ### 2. Verify
 
-- Run `npm -s convex codegen` to regenerate types after creating the new file
+- Run `npx convex dev --once` to regenerate types after creating the new file
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -191,7 +191,7 @@ export const checkSlugAvailable = query({
 5. `updateStatus` can update status and optionally set Convex project details (for use by provisioning actions)
 6. `remove` requires owner role and deletes the template project
 7. `checkSlugAvailable` checks if a slug is already taken in our system
-8. `npm -s convex codegen` succeeds
+8. `npx convex dev --once` succeeds
 9. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

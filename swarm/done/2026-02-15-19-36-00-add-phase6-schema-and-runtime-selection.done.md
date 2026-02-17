@@ -88,7 +88,7 @@ This is stretch for this task. If the repo connection flow already has a setting
 
 ### 6. Run codegen and verify
 
-- Run `npm -s convex codegen` to regenerate types
+- Run `npx convex dev --once` to regenerate types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -105,7 +105,7 @@ This is stretch for this task. If the repo connection flow already has a setting
 3. `convex/schema.ts` includes the `flyioDeployKeys` table with all fields from PLAN.md
 4. Both new tables have appropriate indexes (`by_teamId`, `by_slug`, `by_userId`)
 5. Existing functionality is not broken — all new fields on `repos` are optional
-6. `npm -s convex codegen` succeeds
+6. `npx convex dev --once` succeeds
 7. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

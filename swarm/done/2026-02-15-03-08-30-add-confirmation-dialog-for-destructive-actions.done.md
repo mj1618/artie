@@ -125,4 +125,4 @@ In `src/app/(dashboard)/repos/[repoId]/settings/page.tsx`:
 - `"use client"` directive present on all three files
 - Loading/error states handled properly in both pages
 - `npm -s tsc -p tsconfig.json --noEmit` — passes
-- `npm -s convex codegen` — passes
+- `npx convex dev --once` — passes

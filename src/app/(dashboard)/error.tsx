@@ -25,20 +25,20 @@ export default function DashboardError({
           />
         </svg>
       </div>
-      <h2 className="text-xl font-bold text-zinc-100">Something went wrong</h2>
-      <p className="mt-2 max-w-md text-center text-sm text-zinc-400">
+      <h2 className="text-xl font-bold text-paper-900">Something went wrong</h2>
+      <p className="mt-2 max-w-md text-center text-sm text-paper-600">
         {error.message || "An unexpected error occurred."}
       </p>
       <div className="mt-6 flex items-center gap-4">
         <button
           onClick={reset}
-          className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="rounded-md bg-paper-700 px-4 py-2 text-sm font-medium text-paper-50 hover:bg-paper-300"
         >
           Try again
         </button>
         <Link
           href="/home"
-          className="text-sm text-zinc-400 hover:text-white"
+          className="text-sm text-paper-600 hover:text-paper-950"
         >
           Go to dashboard
         </Link>

@@ -74,7 +74,7 @@ The boilerplate tasks file is not needed. Remove it entirely.
 
 ### 3. Run Convex codegen
 
-After updating the schema, run `npm -s convex codegen` to regenerate the `_generated` directory.
+After updating the schema, run `npx convex dev --once` to regenerate the `_generated` directory.
 
 ### 4. Verify no TypeScript errors
 
@@ -99,7 +99,7 @@ Replace the boilerplate Next.js landing page content with a simple Artie placeho
 
 1. `convex/schema.ts` defines all 7 tables (`userProfiles`, `teams`, `teamMembers`, `invites`, `repos`, `sessions`, `messages`) with correct field types and indexes
 2. `convex/tasks.ts` is deleted
-3. `npm -s convex codegen` completes successfully
+3. `npx convex dev --once` completes successfully
 4. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors (you may need a convex tsconfig — check for `convex/tsconfig.json`)
 5. `src/app/page.tsx` shows a simple Artie-branded placeholder (no references to tasks or Next.js boilerplate)
 6. The app still runs without errors
@@ -111,7 +111,7 @@ Replace the boilerplate Next.js landing page content with a simple Artie placeho
 - Use `v.object({...})` for nested objects like the `changes` field on messages
 - The `userId` fields should be `v.string()` (not `v.id("users")`) since Convex Auth manages the users table and we reference by auth user ID
 - Do NOT delete the `convex/_generated/` directory — just run codegen to regenerate it
-- Run `npm -s convex codegen` (not `npx`) per project conventions
+- Run `npx convex dev --once` (not `npx`) per project conventions
 
 ---
 

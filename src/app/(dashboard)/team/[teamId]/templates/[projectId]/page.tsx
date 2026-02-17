@@ -44,7 +44,7 @@ export default function TemplateProjectDetailPage() {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="flex justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-paper-400 border-t-white" />
         </div>
       </div>
     );
@@ -55,12 +55,12 @@ export default function TemplateProjectDetailPage() {
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href={`/team/${teamId}`}
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-paper-600 hover:text-paper-800"
         >
           &larr; Back to Team
         </Link>
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-8 text-center">
+          <p className="text-sm text-paper-600">
             Project not found or you don&apos;t have access.
           </p>
         </div>
@@ -89,47 +89,47 @@ export default function TemplateProjectDetailPage() {
     <div className="mx-auto max-w-3xl px-6 py-10">
       <Link
         href={`/team/${teamId}`}
-        className="text-sm text-zinc-400 hover:text-zinc-200"
+        className="text-sm text-paper-600 hover:text-paper-800"
       >
         &larr; Back to Team
       </Link>
 
       <div className="mt-4 flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-zinc-100">{project.name}</h1>
+        <h1 className="text-2xl font-bold text-paper-900">{project.name}</h1>
         <StatusBadge status={project.status} />
       </div>
 
       {/* Project Information */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">
+        <h2 className="text-lg font-semibold text-paper-800">
           Project Information
         </h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-          <dl className="divide-y divide-zinc-800">
+        <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
+          <dl className="divide-y divide-paper-300">
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">Name</dt>
-              <dd className="text-sm font-medium text-zinc-200">
+              <dt className="text-sm text-paper-600">Name</dt>
+              <dd className="text-sm font-medium text-paper-800">
                 {project.name}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">Slug</dt>
-              <dd className="font-mono text-sm text-zinc-200">
+              <dt className="text-sm text-paper-600">Slug</dt>
+              <dd className="font-mono text-sm text-paper-800">
                 {project.slug}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">Template</dt>
-              <dd className="text-sm text-zinc-200">Next.js + Convex</dd>
+              <dt className="text-sm text-paper-600">Template</dt>
+              <dd className="text-sm text-paper-800">Next.js + Convex</dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">Created</dt>
-              <dd className="text-sm text-zinc-200">
+              <dt className="text-sm text-paper-600">Created</dt>
+              <dd className="text-sm text-paper-800">
                 {new Date(project.createdAt).toLocaleDateString()}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">Status</dt>
+              <dt className="text-sm text-paper-600">Status</dt>
               <dd>
                 <StatusBadge status={project.status} />
               </dd>
@@ -141,21 +141,21 @@ export default function TemplateProjectDetailPage() {
       {/* Deployment Details */}
       {(project.convexProjectId || project.convexDeploymentUrl || project.flyioAppName) && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-zinc-200">
+          <h2 className="text-lg font-semibold text-paper-800">
             Deployment Details
           </h2>
-          <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-            <dl className="divide-y divide-zinc-800">
+          <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
+            <dl className="divide-y divide-paper-300">
               <div className="flex items-center justify-between px-4 py-3">
-                <dt className="text-sm text-zinc-400">Convex Project ID</dt>
-                <dd className="text-sm text-zinc-200">
+                <dt className="text-sm text-paper-600">Convex Project ID</dt>
+                <dd className="text-sm text-paper-800">
                   {project.convexProjectId || (
-                    <span className="text-zinc-500">Pending...</span>
+                    <span className="text-paper-500">Pending...</span>
                   )}
                 </dd>
               </div>
               <div className="flex items-center justify-between px-4 py-3">
-                <dt className="text-sm text-zinc-400">Convex Deployment URL</dt>
+                <dt className="text-sm text-paper-600">Convex Deployment URL</dt>
                 <dd className="text-sm">
                   {project.convexDeploymentUrl ? (
                     <a
@@ -167,14 +167,14 @@ export default function TemplateProjectDetailPage() {
                       {project.convexDeploymentUrl}
                     </a>
                   ) : (
-                    <span className="text-zinc-500">Pending...</span>
+                    <span className="text-paper-500">Pending...</span>
                   )}
                 </dd>
               </div>
               {project.flyioAppName && (
                 <div className="flex items-center justify-between px-4 py-3">
-                  <dt className="text-sm text-zinc-400">Fly.io App Name</dt>
-                  <dd className="font-mono text-sm text-zinc-200">
+                  <dt className="text-sm text-paper-600">Fly.io App Name</dt>
+                  <dd className="font-mono text-sm text-paper-800">
                     {project.flyioAppName}
                   </dd>
                 </div>
@@ -198,13 +198,13 @@ export default function TemplateProjectDetailPage() {
       {isOwner && (
         <div className="mt-8">
           <h2 className="text-lg font-semibold text-red-400">Danger Zone</h2>
-          <div className="mt-3 overflow-hidden rounded-lg border border-red-900/50 bg-zinc-900">
+          <div className="mt-3 overflow-hidden rounded-lg border border-red-900/50 bg-paper-200">
             <div className="flex items-center justify-between px-4 py-4">
               <div>
-                <p className="text-sm font-medium text-zinc-200">
+                <p className="text-sm font-medium text-paper-800">
                   Delete Project
                 </p>
-                <p className="mt-0.5 text-xs text-zinc-500">
+                <p className="mt-0.5 text-xs text-paper-500">
                   Permanently delete this template project. This cannot be
                   undone.
                 </p>

@@ -1,8 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Paper theme - warm cream/parchment colors */
+  --background: #faf7f2;
+  --foreground: #3d362c;
+  
+  /* Paper theme palette */
+  --paper-50: #fdfcfa;
+  --paper-100: #faf7f2;
+  --paper-200: #f5f0e8;
+  --paper-300: #e8e0d4;
+  --paper-400: #d4c9b8;
+  --paper-500: #b5a894;
+  --paper-600: #8a7d6a;
+  --paper-700: #6b5f4e;
+  --paper-800: #4d4538;
+  --paper-900: #3d362c;
+  --paper-950: #2d2820;
 }
 
 @theme inline {
@@ -10,13 +24,19 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  
+  /* Paper theme colors for Tailwind */
+  --color-paper-50: var(--paper-50);
+  --color-paper-100: var(--paper-100);
+  --color-paper-200: var(--paper-200);
+  --color-paper-300: var(--paper-300);
+  --color-paper-400: var(--paper-400);
+  --color-paper-500: var(--paper-500);
+  --color-paper-600: var(--paper-600);
+  --color-paper-700: var(--paper-700);
+  --color-paper-800: var(--paper-800);
+  --color-paper-900: var(--paper-900);
+  --color-paper-950: var(--paper-950);
 }
 
 html,

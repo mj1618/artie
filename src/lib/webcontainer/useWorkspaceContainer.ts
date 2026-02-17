@@ -50,6 +50,9 @@ export function useWorkspaceContainer(
 
   const boot = useCallback(async () => {
     if (startedRef.current) return;
+    // If we have a sessionId but branch is undefined, wait for session to load
+    // to avoid booting with wrong branch then immediately rebooting
+    if (sessionId && options?.branch === undefined) return;
     startedRef.current = true;
     bootedBranchRef.current = options?.branch;
 
@@ -96,7 +99,7 @@ export function useWorkspaceContainer(
         error: err instanceof Error ? err.message : "Failed to start preview",
       }));
     }
-  }, [repoId, fetchRepoFiles, options?.branch]);
+  }, [repoId, sessionId, fetchRepoFiles, options?.branch]);
 
   const refreshFiles = useCallback(async (): Promise<{
     success: boolean;
@@ -161,6 +164,9 @@ export function useWorkspaceContainer(
   // When branch changes after initial boot, teardown and reboot
   useEffect(() => {
     if (!startedRef.current) return;
+    // Don't tear down if branch becomes undefined (e.g., session data temporarily unavailable)
+    // Only reboot when branch changes to a different defined value
+    if (options?.branch === undefined) return;
     if (options?.branch === bootedBranchRef.current) return;
 
     startedRef.current = false;

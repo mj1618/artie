@@ -62,14 +62,14 @@ export function MessageBubble({
 
   return (
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
-      <span className="mb-1 text-xs text-zinc-400">
+      <span className="mb-1 text-xs text-paper-600">
         {isUser ? "You" : "Artie"}
       </span>
       <div
         className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
           isUser
-            ? "ml-auto bg-zinc-800 text-white"
-            : "mr-auto bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+            ? "ml-auto bg-paper-300 text-paper-950"
+            : "mr-auto bg-paper-700 text-paper-50 dark:bg-paper-300 dark:text-paper-900"
         }`}
       >
         {isUser ? (
@@ -79,10 +79,10 @@ export function MessageBubble({
             {content ? (
               <MarkdownContent content={content} />
             ) : streaming ? (
-              <span className="text-zinc-400">Thinking...</span>
+              <span className="text-paper-600">Thinking...</span>
             ) : null}
             {streaming && (
-              <span className="inline-block animate-pulse text-zinc-400">
+              <span className="inline-block animate-pulse text-paper-600">
                 ▍
               </span>
             )}
@@ -90,15 +90,15 @@ export function MessageBubble({
         )}
 
         {changes && changes.files.length > 0 && (
-          <div className="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <div className="mt-2 border-t border-paper-800 pt-2 dark:border-paper-400">
+            <span className="text-xs font-medium text-paper-500 dark:text-paper-600">
               Changed files:
             </span>
             <div className="mt-1 flex flex-wrap gap-1">
               {changes.files.map((file) => (
                 <span
                   key={file}
-                  className="inline-block rounded bg-zinc-200 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"
+                  className="inline-block rounded bg-paper-800 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-paper-400 dark:text-paper-700"
                 >
                   {file}
                 </span>
@@ -109,7 +109,7 @@ export function MessageBubble({
               <div className="mt-2">
                 <button
                   onClick={() => setShowPushDialog(true)}
-                  className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-green-500"
+                  className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-paper-950 transition-colors hover:bg-green-500"
                 >
                   Approve & Push to GitHub
                 </button>
@@ -133,7 +133,7 @@ export function MessageBubble({
                   href={changes.prUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white hover:bg-purple-500"
+                  className="inline-flex items-center gap-1 rounded bg-purple-600 px-2 py-1 text-xs font-medium text-paper-950 hover:bg-purple-500"
                 >
                   View Pull Request
                 </a>
@@ -142,7 +142,7 @@ export function MessageBubble({
 
             {changes.committed && changes.commitSha && !changes.prUrl && (
               <div className="mt-2">
-                <span className="inline-flex items-center gap-1 rounded bg-green-700 px-2 py-1 text-xs font-medium text-white">
+                <span className="inline-flex items-center gap-1 rounded bg-green-700 px-2 py-1 text-xs font-medium text-paper-950">
                   Committed: {changes.commitSha.slice(0, 7)}
                 </span>
               </div>
@@ -161,7 +161,7 @@ export function MessageBubble({
           />
         )}
       </div>
-      <span className="mt-1 text-xs text-zinc-400">
+      <span className="mt-1 text-xs text-paper-600">
         {formatTime(timestamp)}
       </span>
     </div>

@@ -240,7 +240,7 @@ Wait — actually, keep a lightweight approach. The typing indicator can still s
 
 ### 6. Run codegen and verify
 
-- Run `npm -s convex codegen` after schema change
+- Run `npx convex dev --once` after schema change
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -265,7 +265,7 @@ Wait — actually, keep a lightweight approach. The typing indicator can still s
 7. The input is disabled while a response is being generated
 8. If streaming fails mid-way, an error message is shown in the assistant bubble
 9. The old `TypingIndicator` dots are no longer shown at the bottom of the message list
-10. `npm -s convex codegen` runs without errors
+10. `npx convex dev --once` runs without errors
 11. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

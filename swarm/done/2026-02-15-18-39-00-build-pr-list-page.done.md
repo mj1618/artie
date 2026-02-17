@@ -208,7 +208,7 @@ Add a "Pull Requests" nav item in `src/components/layout/Sidebar.tsx` below Sett
 
 ### 4. Run codegen and verify
 
-- Run `npm -s convex codegen` to regenerate API types with the new action
+- Run `npx convex dev --once` to regenerate API types with the new action
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

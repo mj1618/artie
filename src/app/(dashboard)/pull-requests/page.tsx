@@ -44,22 +44,22 @@ function PRCard({ pr }: { pr: PullRequest }) {
   return (
     <Link
       href={`/pull-requests/${pr.repoId}/${pr.prNumber}`}
-      className="block rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-800/50"
+      className="block rounded-lg border border-paper-300 bg-paper-200 p-4 transition-colors hover:border-paper-400 hover:bg-paper-300/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium text-zinc-100">
+            <span className="truncate text-sm font-medium text-paper-900">
               {pr.title}
             </span>
             {pr.isDraft && (
-              <span className="shrink-0 rounded-full bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-400">
+              <span className="shrink-0 rounded-full bg-paper-400 px-2 py-0.5 text-[10px] font-medium text-paper-600">
                 Draft
               </span>
             )}
           </div>
-          <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-            <span className="font-medium text-zinc-400">
+          <div className="mt-1 flex items-center gap-2 text-xs text-paper-500">
+            <span className="font-medium text-paper-600">
               {pr.repoFullName}
             </span>
             <span>#{pr.prNumber}</span>
@@ -68,7 +68,7 @@ function PRCard({ pr }: { pr: PullRequest }) {
             <span>·</span>
             <span>updated {timeAgo(pr.updatedAt)}</span>
           </div>
-          <div className="mt-1.5 text-xs text-zinc-500">
+          <div className="mt-1.5 text-xs text-paper-500">
             <span>
               {pr.headBranch} → {pr.baseBranch}
             </span>
@@ -114,11 +114,11 @@ export default function PullRequestsPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-zinc-100">Pull Requests</h1>
+        <h1 className="text-2xl font-bold text-paper-900">Pull Requests</h1>
         <button
           onClick={fetchPRs}
           disabled={loading}
-          className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-700 disabled:opacity-50"
+          className="rounded-md bg-paper-300 px-3 py-1.5 text-sm text-paper-700 hover:bg-paper-400 disabled:opacity-50"
         >
           Refresh
         </button>
@@ -139,7 +139,7 @@ export default function PullRequestsPage() {
       )}
 
       {prs && !loading && prs.length === 0 && (
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center text-sm text-zinc-500">
+        <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-8 text-center text-sm text-paper-500">
           No open pull requests across your connected repositories.
         </div>
       )}

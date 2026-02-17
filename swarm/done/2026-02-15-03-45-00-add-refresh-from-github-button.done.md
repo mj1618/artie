@@ -69,7 +69,7 @@ When refreshing, if the user has pending (uncommitted) file changes in the curre
 
 ### 5. Run codegen and verify
 
-- Run `npm -s convex codegen` if any Convex changes needed
+- Run `npx convex dev --once` if any Convex changes needed
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

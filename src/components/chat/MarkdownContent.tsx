@@ -19,13 +19,13 @@ function CodeBlock({ children }: { children: React.ReactNode }) {
     <div className="group relative my-2">
       <pre
         ref={preRef}
-        className="overflow-x-auto rounded bg-zinc-900 p-3 text-xs dark:bg-zinc-950"
+        className="overflow-x-auto rounded bg-paper-200 p-3 text-xs dark:bg-paper-100"
       >
         {children}
       </pre>
       <button
         onClick={handleCopy}
-        className="absolute right-2 top-2 rounded bg-zinc-700 px-1.5 py-1 text-zinc-300 opacity-0 transition-opacity hover:bg-zinc-600 group-hover:opacity-100"
+        className="absolute right-2 top-2 rounded bg-paper-400 px-1.5 py-1 text-paper-700 opacity-0 transition-opacity hover:bg-paper-500 group-hover:opacity-100"
         title={copied ? "Copied!" : "Copy code"}
       >
         {copied ? (
@@ -73,14 +73,14 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
           const isBlock = className?.startsWith("language-");
           if (isBlock) {
             return (
-              <code className={`font-mono text-zinc-200 ${className}`} {...props}>
+              <code className={`font-mono text-paper-800 ${className}`} {...props}>
                 {children}
               </code>
             );
           }
           return (
             <code
-              className="rounded bg-zinc-200 px-1 py-0.5 font-mono text-xs text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200"
+              className="rounded bg-paper-800 px-1 py-0.5 font-mono text-xs text-paper-200 dark:bg-paper-400 dark:text-paper-800"
               {...props}
             >
               {children}
@@ -118,7 +118,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
           </a>
         ),
         blockquote: ({ children }) => (
-          <blockquote className="my-2 border-l-2 border-zinc-500 pl-3 italic text-zinc-400">
+          <blockquote className="my-2 border-l-2 border-paper-500 pl-3 italic text-paper-600">
             {children}
           </blockquote>
         ),
@@ -128,12 +128,12 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
           </div>
         ),
         th: ({ children }) => (
-          <th className="border border-zinc-700 bg-zinc-800 px-2 py-1 text-left font-medium">
+          <th className="border border-paper-400 bg-paper-300 px-2 py-1 text-left font-medium">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="border border-zinc-700 px-2 py-1">{children}</td>
+          <td className="border border-paper-400 px-2 py-1">{children}</td>
         ),
       }}
     >

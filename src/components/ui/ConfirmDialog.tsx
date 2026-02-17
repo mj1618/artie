@@ -44,22 +44,22 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-paper-950/40 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-sm rounded-lg border border-zinc-800 bg-zinc-900 p-6 animate-dialog-in">
-        <h3 className="text-lg font-semibold text-zinc-100">{title}</h3>
-        <p className="mt-2 text-sm text-zinc-400">{description}</p>
+      <div className="w-full max-w-sm rounded-lg border border-paper-300 bg-paper-100 p-6 shadow-xl animate-dialog-in">
+        <h3 className="text-lg font-semibold text-paper-900">{title}</h3>
+        <p className="mt-2 text-sm text-paper-600">{description}</p>
         <div className="mt-4 flex justify-end gap-2">
           <button
             ref={cancelRef}
             onClick={onClose}
             disabled={loading}
-            className="rounded-md px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-200 disabled:opacity-50"
+            className="rounded-md px-3 py-1.5 text-sm text-paper-600 hover:text-paper-800 disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -69,7 +69,7 @@ export function ConfirmDialog({
             className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
               variant === "danger"
                 ? "bg-red-600 text-white hover:bg-red-700"
-                : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                : "bg-paper-700 text-paper-50 hover:bg-paper-800"
             }`}
           >
             {loading ? (

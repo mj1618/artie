@@ -101,7 +101,7 @@ Add the necessary imports for `mutation`, `v`, and `getAuthUserId` (currently on
 
 ### 5. Run codegen and verify
 
-- Run `npm -s convex codegen` after adding the mutations
+- Run `npx convex dev --once` after adding the mutations
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -121,7 +121,7 @@ Add the necessary imports for `mutation`, `v`, and `getAuthUserId` (currently on
 6. Owner can remove a repo
 7. After adding a repo, it appears on the dashboard under the team card and links to `/workspace/[repoId]`
 8. Non-owner members see the repo list but not the add/remove controls
-9. `npm -s convex codegen` completes successfully
+9. `npx convex dev --once` completes successfully
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

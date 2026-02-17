@@ -15,6 +15,9 @@ type SpritePhase =
   | "idle"
   | "provisioning"
   | "deploying"
+  | "cloning"
+  | "installing"
+  | "starting"
   | "running"
   | "stopping"
   | "stopped"
@@ -28,6 +31,12 @@ function PhaseLabel({ phase }: { phase: SpritePhase }) {
       return <span>Creating Fly.io app...</span>;
     case "deploying":
       return <span>Deploying container...</span>;
+    case "cloning":
+      return <span>Cloning repository...</span>;
+    case "installing":
+      return <span>Installing dependencies...</span>;
+    case "starting":
+      return <span>Starting dev server...</span>;
     case "running":
       return <span>Running</span>;
     case "stopping":
@@ -43,6 +52,8 @@ function BootProgressStepper({ phase }: { phase: SpritePhase }) {
   const steps = [
     { key: "provisioning", label: "Creating Fly.io app" },
     { key: "deploying", label: "Deploying container" },
+    { key: "cloning", label: "Cloning repository" },
+    { key: "installing", label: "Installing dependencies" },
     { key: "running", label: "Ready" },
   ];
 
@@ -50,8 +61,11 @@ function BootProgressStepper({ phase }: { phase: SpritePhase }) {
     idle: -1,
     provisioning: 0,
     deploying: 1,
-    running: 2,
-    stopping: 2,
+    cloning: 2,
+    installing: 3,
+    starting: 3, // Same step as installing
+    running: 4,
+    stopping: 4,
     stopped: -1,
     error: -1,
   };
@@ -77,13 +91,13 @@ function BootProgressStepper({ phase }: { phase: SpritePhase }) {
                 <div className="h-2 w-2 rounded-full bg-purple-400" />
               </div>
             ) : (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-700">
-                <div className="h-2 w-2 rounded-full bg-zinc-700" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-paper-400">
+                <div className="h-2 w-2 rounded-full bg-paper-400" />
               </div>
             )}
 
             <span className={`text-sm ${
-              isComplete ? "text-purple-400" : isCurrent ? "text-zinc-100" : "text-zinc-600"
+              isComplete ? "text-purple-400" : isCurrent ? "text-paper-900" : "text-paper-400"
             }`}>
               {step.label}
               {isCurrent && "..."}
@@ -125,6 +139,9 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
 
   // Track if we've initiated provisioning
   const [provisioningInitiated, setProvisioningInitiated] = useState(false);
+  
+  // Note: Container now pushes status to Convex via HTTP endpoint,
+  // so no need to poll - the useQuery will reactively update
 
   // Auto-provision Sprite when session is available
   useEffect(() => {
@@ -179,8 +196,33 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
     }
   }, [sprite?.previewUrl, currentUrl]);
 
-  const phase: SpritePhase = sprite?.status ?? "idle";
-  const isLoading = phase === "idle" || phase === "provisioning" || phase === "deploying";
+  // Compute phase from both status and cloneStatus
+  const computePhase = (): SpritePhase => {
+    const status = sprite?.status;
+    const cloneStatus = sprite?.cloneStatus;
+    
+    if (!status || status === "stopped") return "stopped";
+    if (status === "error") return "error";
+    if (status === "provisioning") return "provisioning";
+    if (status === "deploying") return "deploying";
+    if (status === "stopping") return "stopping";
+    
+    // Machine is "running" - check clone status
+    if (status === "running") {
+      if (cloneStatus === "ready") return "running";
+      if (cloneStatus === "failed") return "error";
+      if (cloneStatus === "installing") return "installing";
+      if (cloneStatus === "cloning") return "cloning";
+      // pending or undefined - still cloning
+      return "cloning";
+    }
+    
+    return "idle";
+  };
+  
+  const phase = computePhase();
+  const isLoading = phase === "idle" || phase === "provisioning" || phase === "deploying" 
+    || phase === "cloning" || phase === "installing" || phase === "starting";
   const isRunning = phase === "running";
   const isError = phase === "error";
   const isStopped = phase === "stopped";
@@ -208,23 +250,23 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
   const tabClass = (active: boolean) =>
     `rounded px-2.5 py-1 text-xs font-medium transition-colors ${
       active
-        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-        : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+        ? "bg-paper-200 text-paper-950 dark:bg-paper-700 dark:text-paper-200"
+        : "text-paper-500 hover:text-paper-400 dark:text-paper-600 dark:hover:text-paper-800"
     }`;
 
   // No session selected
   if (!sessionId) {
     return (
-      <div className="flex h-full flex-col bg-zinc-100 dark:bg-zinc-950">
-        <div className="flex items-center gap-1 border-b border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
-          <span className="text-xs text-zinc-400">Fly.io Sprite</span>
+      <div className="flex h-full flex-col bg-paper-700 dark:bg-paper-100">
+        <div className="flex items-center gap-1 border-b border-paper-600 px-3 py-1.5 dark:border-paper-300">
+          <span className="text-xs text-paper-600">Fly.io Sprite</span>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-900/20">
               <FlyioLogo className="h-6 w-6 text-purple-400" />
             </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-paper-500 dark:text-paper-600">
               Select or create a session to start the Fly.io preview
             </p>
           </div>
@@ -234,9 +276,9 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
   }
 
   return (
-    <div className="flex h-full flex-col bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex h-full flex-col bg-paper-700 dark:bg-paper-100">
       {/* Toggle bar */}
-      <div className="flex items-center gap-1 border-b border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
+      <div className="flex items-center gap-1 border-b border-paper-600 px-3 py-1.5 dark:border-paper-300">
         <button
           onClick={() => setView("preview")}
           className={tabClass(view === "preview")}
@@ -262,12 +304,13 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
 
       {/* Content area */}
       {view === "logs" ? (
-        <div className="flex-1 overflow-auto bg-zinc-950 p-3 font-mono text-xs leading-relaxed text-zinc-300">
-          <div className="text-zinc-500">
+        <div className="flex-1 overflow-auto bg-paper-100 p-3 font-mono text-xs leading-relaxed text-paper-700">
+          <div className="text-paper-500">
             {sprite ? (
               <>
                 <div>App: {sprite.appName}</div>
                 <div>Status: {sprite.status}</div>
+                <div>Clone Status: {sprite.cloneStatus ?? "unknown"}</div>
                 {sprite.machineId && <div>Machine: {sprite.machineId}</div>}
                 {sprite.previewUrl && <div>URL: {sprite.previewUrl}</div>}
                 {sprite.errorMessage && (
@@ -282,10 +325,10 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
       ) : isRunning && sprite?.previewUrl && currentUrl ? (
         <>
           {/* Nav bar */}
-          <div className="flex items-center gap-2 border-b border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
+          <div className="flex items-center gap-2 border-b border-paper-600 px-3 py-1.5 dark:border-paper-300">
             <button
               onClick={() => iframeRef.current?.contentWindow?.history.back()}
-              className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
               title="Back"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -294,7 +337,7 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
             </button>
             <button
               onClick={() => iframeRef.current?.contentWindow?.history.forward()}
-              className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
               title="Forward"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -307,21 +350,21 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
                   iframeRef.current.src = currentUrl;
                 }
               }}
-              className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
               title="Refresh"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
               </svg>
             </button>
-            <div className="flex-1 rounded bg-zinc-800 px-3 py-1">
-              <span className="text-xs text-zinc-400">{currentUrl}</span>
+            <div className="flex-1 rounded bg-paper-300 px-3 py-1">
+              <span className="text-xs text-paper-600">{currentUrl}</span>
             </div>
             <a
               href={currentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
               title="Open in new tab"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -353,20 +396,20 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
               />
             </svg>
           </div>
-          <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">
+          <h3 className="text-base font-semibold text-paper-200 dark:text-paper-800">
             Failed to start Fly.io Sprite
           </h3>
-          <p className="max-w-sm text-center text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="max-w-sm text-center text-sm text-paper-400 dark:text-paper-600">
             {sprite?.errorMessage ?? "An unknown error occurred"}
           </p>
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-400 underline"
+            className="text-xs text-paper-500 hover:text-paper-400 dark:text-paper-400 dark:hover:text-paper-600 underline"
           >
             {showDetails ? "Hide details" : "Show details"}
           </button>
           {showDetails && sprite && (
-            <div className="w-full max-w-lg rounded bg-zinc-100 p-3 font-mono text-xs text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400">
+            <div className="w-full max-w-lg rounded bg-paper-700 p-3 font-mono text-xs text-paper-400 dark:bg-paper-100 dark:text-paper-600">
               <div>App: {sprite.appName}</div>
               <div>Status: {sprite.status}</div>
               {sprite.errorMessage && (
@@ -376,25 +419,25 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
           )}
           <button
             onClick={handleRetry}
-            className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded bg-paper-200 px-4 py-2 text-sm font-medium text-paper-950 hover:bg-paper-300 dark:bg-paper-700 dark:text-paper-200 dark:hover:bg-paper-600"
           >
             Retry
           </button>
         </div>
       ) : isStopped ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800">
-            <FlyioLogo className="h-6 w-6 text-zinc-500" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-paper-300">
+            <FlyioLogo className="h-6 w-6 text-paper-500" />
           </div>
-          <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">
+          <h3 className="text-base font-semibold text-paper-200 dark:text-paper-800">
             Sprite Stopped
           </h3>
-          <p className="max-w-sm text-center text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="max-w-sm text-center text-sm text-paper-400 dark:text-paper-600">
             The Fly.io Sprite has been stopped to save resources.
           </p>
           <button
             onClick={handleStart}
-            className="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-500"
+            className="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-paper-950 hover:bg-purple-500"
           >
             Start Sprite
           </button>
@@ -405,7 +448,7 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
             <FlyioLogo className="h-8 w-8 text-purple-400 animate-pulse" />
           </div>
           <BootProgressStepper phase={phase} />
-          <p className="mt-4 text-xs text-zinc-500">
+          <p className="mt-4 text-xs text-paper-500">
             Fly.io Sprites may take 30-60 seconds to start
           </p>
         </div>
@@ -415,7 +458,7 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-900/20">
               <FlyioLogo className="h-6 w-6 text-purple-400" />
             </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-paper-500 dark:text-paper-600">
               Send a message to start the Fly.io preview
             </p>
           </div>
@@ -423,7 +466,7 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
       )}
 
       {/* Status bar */}
-      <div className="border-t border-zinc-200 px-4 py-2 dark:border-zinc-800">
+      <div className="border-t border-paper-600 px-4 py-2 dark:border-paper-300">
         <div className="flex items-center gap-2">
           <FlyioLogo className="h-3.5 w-3.5 text-purple-400" />
           <p
@@ -434,7 +477,7 @@ export function FlyioSpritePreview({ repoId, sessionId, branch }: FlyioSpritePre
                   ? "text-red-500 dark:text-red-400"
                   : isLoading
                     ? "text-yellow-600 dark:text-yellow-400"
-                    : "text-zinc-400 dark:text-zinc-500"
+                    : "text-paper-600 dark:text-paper-500"
             }`}
           >
             {isRunning && sprite?.previewUrl

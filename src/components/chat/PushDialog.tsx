@@ -151,7 +151,7 @@ export function PushDialog({
         role="dialog"
         aria-modal="true"
       >
-        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 animate-dialog-in">
+        <div className="w-full max-w-lg rounded-lg border border-paper-300 bg-paper-200 p-6 animate-dialog-in">
           <div className="flex flex-col items-center text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
               <svg
@@ -168,15 +168,15 @@ export function PushDialog({
                 />
               </svg>
             </div>
-            <h3 className="mt-3 text-lg font-semibold text-zinc-100">
+            <h3 className="mt-3 text-lg font-semibold text-paper-900">
               Changes pushed successfully!
             </h3>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-paper-600">
               {isPr
                 ? `Pull request created on ${pushResult.branchName ?? branchName}`
                 : `Committed to ${repo?.defaultBranch}`}
             </p>
-            <p className="mt-2 font-mono text-xs text-zinc-500">
+            <p className="mt-2 font-mono text-xs text-paper-500">
               {pushResult.commitSha.slice(0, 7)}
             </p>
           </div>
@@ -187,7 +187,7 @@ export function PushDialog({
                 href={pushResult.prUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
+                className="rounded-md bg-paper-300 px-3 py-1.5 text-sm font-medium text-paper-800 hover:bg-paper-400"
               >
                 View Pull Request
               </a>
@@ -197,14 +197,14 @@ export function PushDialog({
                 href={pushResult.commitUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
+                className="rounded-md bg-paper-300 px-3 py-1.5 text-sm font-medium text-paper-800 hover:bg-paper-400"
               >
                 View on GitHub
               </a>
             )}
             <button
               onClick={handleDone}
-              className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500"
+              className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-paper-950 hover:bg-green-500"
             >
               Done
             </button>
@@ -221,7 +221,7 @@ export function PushDialog({
         role="dialog"
         aria-modal="true"
       >
-        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 animate-dialog-in">
+        <div className="w-full max-w-lg rounded-lg border border-paper-300 bg-paper-200 p-6 animate-dialog-in">
           <div className="flex items-center justify-center py-8">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
           </div>
@@ -240,12 +240,12 @@ export function PushDialog({
         role="dialog"
         aria-modal="true"
       >
-        <div className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 animate-dialog-in">
+        <div className="w-full max-w-lg rounded-lg border border-paper-300 bg-paper-200 p-6 animate-dialog-in">
           <p className="text-sm text-red-400">Repository not found.</p>
           <div className="mt-4 flex justify-end">
             <button
               onClick={onClose}
-              className="rounded-md px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-200"
+              className="rounded-md px-3 py-1.5 text-sm text-paper-600 hover:text-paper-800"
             >
               Close
             </button>
@@ -267,12 +267,12 @@ export function PushDialog({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 p-6 outline-none animate-dialog-in"
+        className="w-full max-w-lg rounded-lg border border-paper-300 bg-paper-200 p-6 outline-none animate-dialog-in"
       >
-        <h3 className="text-lg font-semibold text-zinc-100">
+        <h3 className="text-lg font-semibold text-paper-900">
           {isPr ? "Push Changes as Pull Request" : "Push Changes to GitHub"}
         </h3>
-        <p className="mt-1 text-xs text-zinc-400">
+        <p className="mt-1 text-xs text-paper-600">
           {isPr
             ? `Creating a PR against ${repo.defaultBranch} on ${repo.githubOwner}/${repo.githubRepo}`
             : `Committing directly to ${repo.defaultBranch} on ${repo.githubOwner}/${repo.githubRepo}`}
@@ -280,7 +280,7 @@ export function PushDialog({
 
         <div className="mt-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-zinc-400">
+            <label className="block text-xs font-medium text-paper-600">
               Commit message
             </label>
             <input
@@ -289,10 +289,10 @@ export function PushDialog({
               onChange={(e) => setCommitMessage(e.target.value)}
               maxLength={72}
               disabled={pushing}
-              className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none disabled:opacity-50"
+              className="mt-1 w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-1.5 text-sm text-paper-900 placeholder-paper-500 focus:border-paper-500 focus:outline-none disabled:opacity-50"
               placeholder="Describe your changes..."
             />
-            <span className="mt-0.5 block text-right text-xs text-zinc-500">
+            <span className="mt-0.5 block text-right text-xs text-paper-500">
               {commitMessage.length}/72
             </span>
           </div>
@@ -300,7 +300,7 @@ export function PushDialog({
           {isPr && (
             <>
               <div>
-                <label className="block text-xs font-medium text-zinc-400">
+                <label className="block text-xs font-medium text-paper-600">
                   Branch name
                 </label>
                 <input
@@ -308,7 +308,7 @@ export function PushDialog({
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
                   disabled={pushing}
-                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-mono text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none disabled:opacity-50"
+                  className="mt-1 w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-1.5 font-mono text-sm text-paper-900 placeholder-paper-500 focus:border-paper-500 focus:outline-none disabled:opacity-50"
                   placeholder="artie/my-changes"
                 />
                 {sessionBranch && (
@@ -318,7 +318,7 @@ export function PushDialog({
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-400">
+                <label className="block text-xs font-medium text-paper-600">
                   PR title
                 </label>
                 <input
@@ -326,12 +326,12 @@ export function PushDialog({
                   value={prTitle}
                   onChange={(e) => setPrTitle(e.target.value)}
                   disabled={pushing}
-                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none disabled:opacity-50"
+                  className="mt-1 w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-1.5 text-sm text-paper-900 placeholder-paper-500 focus:border-paper-500 focus:outline-none disabled:opacity-50"
                   placeholder="PR title..."
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-400">
+                <label className="block text-xs font-medium text-paper-600">
                   PR description
                 </label>
                 <textarea
@@ -339,7 +339,7 @@ export function PushDialog({
                   onChange={(e) => setPrBody(e.target.value)}
                   rows={4}
                   disabled={pushing}
-                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none disabled:opacity-50"
+                  className="mt-1 w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-1.5 text-sm text-paper-900 placeholder-paper-500 focus:border-paper-500 focus:outline-none disabled:opacity-50"
                   placeholder="Describe the PR..."
                 />
               </div>
@@ -347,14 +347,14 @@ export function PushDialog({
           )}
 
           <div>
-            <label className="block text-xs font-medium text-zinc-400">
+            <label className="block text-xs font-medium text-paper-600">
               Files to commit
             </label>
-            <div className="mt-1 max-h-32 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-800 p-2">
+            <div className="mt-1 max-h-32 overflow-y-auto rounded-md border border-paper-400 bg-paper-300 p-2">
               {files.map((file) => (
                 <div
                   key={file}
-                  className="font-mono text-xs text-zinc-300"
+                  className="font-mono text-xs text-paper-700"
                 >
                   {file}
                 </div>
@@ -371,14 +371,14 @@ export function PushDialog({
           <button
             onClick={onClose}
             disabled={pushing}
-            className="rounded-md px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-200 disabled:opacity-50"
+            className="rounded-md px-3 py-1.5 text-sm text-paper-600 hover:text-paper-800 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handlePush}
             disabled={pushing}
-            className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50"
+            className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-paper-950 hover:bg-green-500 disabled:opacity-50"
           >
             {pushing ? (
               <span className="flex items-center gap-2">

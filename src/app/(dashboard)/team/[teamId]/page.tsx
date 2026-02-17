@@ -42,7 +42,7 @@ function MembersList({
 
   if (members.length <= 1) {
     return (
-      <div className="px-4 py-3 text-sm text-zinc-500">
+      <div className="px-4 py-3 text-sm text-paper-500">
         No other members yet
       </div>
     );
@@ -74,11 +74,11 @@ function MembersList({
             className="flex items-center justify-between px-4 py-3"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-zinc-200">
+              <p className="truncate text-sm font-medium text-paper-800">
                 {member.name ?? member.email ?? "Unknown user"}
               </p>
               {member.name && member.email && (
-                <p className="truncate text-xs text-zinc-500">{member.email}</p>
+                <p className="truncate text-xs text-paper-500">{member.email}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ function MembersList({
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                   member.role === "owner"
                     ? "bg-amber-900/50 text-amber-300"
-                    : "bg-zinc-800 text-zinc-400"
+                    : "bg-paper-300 text-paper-600"
                 }`}
               >
                 {member.role}
@@ -145,7 +145,7 @@ function RepoList({
 
   if (repos.length === 0) {
     return (
-      <div className="px-4 py-3 text-sm text-zinc-500">
+      <div className="px-4 py-3 text-sm text-paper-500">
         No repositories connected
       </div>
     );
@@ -168,11 +168,11 @@ function RepoList({
           className="flex items-center justify-between px-4 py-3"
         >
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-zinc-200">
+            <p className="truncate text-sm font-medium text-paper-800">
               {repo.githubOwner}/{repo.githubRepo}
             </p>
             <div className="mt-0.5 flex items-center gap-2">
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-paper-500">
                 {repo.defaultBranch}
               </span>
               <span
@@ -246,15 +246,15 @@ function AddRepoForm({ teamId, onClose }: { teamId: Id<"teams">; onClose?: () =>
           value={githubOwner}
           onChange={(e) => setGithubOwner(e.target.value)}
           placeholder="Owner (e.g. facebook)"
-          className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+          className="flex-1 rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
         />
-        <span className="text-zinc-500">/</span>
+        <span className="text-paper-500">/</span>
         <input
           type="text"
           value={githubRepo}
           onChange={(e) => setGithubRepo(e.target.value)}
           placeholder="Repo (e.g. react)"
-          className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+          className="flex-1 rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -263,12 +263,12 @@ function AddRepoForm({ teamId, onClose }: { teamId: Id<"teams">; onClose?: () =>
           value={defaultBranch}
           onChange={(e) => setDefaultBranch(e.target.value)}
           placeholder="Default branch"
-          className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+          className="flex-1 rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
         />
         <select
           value={pushStrategy}
           onChange={(e) => setPushStrategy(e.target.value as "direct" | "pr")}
-          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
+          className="rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500"
         >
           <option value="pr">Create PR</option>
           <option value="direct">Direct to main</option>
@@ -276,7 +276,7 @@ function AddRepoForm({ teamId, onClose }: { teamId: Id<"teams">; onClose?: () =>
         <button
           type="submit"
           disabled={adding || !githubOwner.trim() || !githubRepo.trim()}
-          className="rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+          className="rounded-md bg-paper-700 px-3 py-2 text-sm font-medium text-paper-5000 hover:bg-zinc-200 disabled:opacity-50"
         >
           {adding ? "Connecting..." : "Connect"}
         </button>
@@ -284,7 +284,7 @@ function AddRepoForm({ teamId, onClose }: { teamId: Id<"teams">; onClose?: () =>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-2 text-sm text-zinc-400 hover:text-zinc-200"
+            className="rounded-md px-3 py-2 text-sm text-paper-600 hover:text-paper-950"
           >
             Cancel
           </button>
@@ -370,12 +370,12 @@ function RepoBrowser({
   return (
     <div className="px-4 py-3">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-zinc-200">
+        <h3 className="text-sm font-medium text-paper-800">
           Your GitHub Repositories
         </h3>
         <button
           onClick={onClose}
-          className="text-xs text-zinc-500 hover:text-zinc-300"
+          className="text-xs text-paper-500 hover:text-paper-700"
         >
           Close
         </button>
@@ -385,14 +385,14 @@ function RepoBrowser({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search repos..."
-        className="mb-3 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+        className="mb-3 w-full rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
       />
       {loading && (
-        <p className="text-sm text-zinc-500">Loading repos from GitHub...</p>
+        <p className="text-sm text-paper-500">Loading repos from GitHub...</p>
       )}
       {error && <p className="text-sm text-red-400">{error}</p>}
       {filtered && (
-        <ul className="max-h-80 divide-y divide-zinc-800 overflow-y-auto rounded border border-zinc-800">
+        <ul className="max-h-80 divide-y divide-zinc-800 overflow-y-auto rounded border border-paper-300">
           {filtered.map((repo) => {
             const key = `${repo.owner}/${repo.name}`;
             const connected = isConnected(repo.owner, repo.name);
@@ -402,15 +402,15 @@ function RepoBrowser({
                 className="flex items-center justify-between px-3 py-2.5"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-zinc-200">
+                  <p className="text-sm font-medium text-paper-800">
                     {repo.fullName}
                   </p>
                   {repo.description && (
-                    <p className="truncate text-xs text-zinc-500">
+                    <p className="truncate text-xs text-paper-500">
                       {repo.description}
                     </p>
                   )}
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-paper-500">
                     <span>{repo.defaultBranch}</span>
                     {repo.private && (
                       <span className="text-amber-400">Private</span>
@@ -431,7 +431,7 @@ function RepoBrowser({
                           [key]: e.target.value as "direct" | "pr",
                         }))
                       }
-                      className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300"
+                      className="rounded border border-paper-400 bg-paper-200 px-2 py-1 text-xs text-paper-700"
                     >
                       <option value="pr">PR</option>
                       <option value="direct">Direct</option>
@@ -439,7 +439,7 @@ function RepoBrowser({
                     <button
                       onClick={() => handleConnect(repo)}
                       disabled={connecting === key}
-                      className="rounded bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+                      className="rounded bg-paper-700 px-2.5 py-1 text-xs font-medium text-paper-5000 hover:bg-zinc-200 disabled:opacity-50"
                     >
                       {connecting === key ? "..." : "Connect"}
                     </button>
@@ -449,7 +449,7 @@ function RepoBrowser({
             );
           })}
           {filtered.length === 0 && (
-            <li className="px-3 py-4 text-center text-sm text-zinc-500">
+            <li className="px-3 py-4 text-center text-sm text-paper-500">
               No repos match your search
             </li>
           )}
@@ -487,19 +487,19 @@ function AddRepoSection({ teamId }: { teamId: Id<"teams"> }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowBrowser(true)}
-            className="rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+            className="rounded-md bg-paper-700 px-3 py-2 text-sm font-medium text-paper-5000 hover:bg-zinc-200"
           >
             Browse GitHub Repos
           </button>
           <button
             onClick={() => setShowManual(true)}
-            className="text-xs text-zinc-500 hover:text-zinc-300"
+            className="text-xs text-paper-500 hover:text-paper-700"
           >
             or enter manually
           </button>
         </div>
       ) : (
-        <div className="text-sm text-zinc-400">
+        <div className="text-sm text-paper-600">
           <a
             href="/settings"
             className="text-blue-400 hover:text-blue-300"
@@ -509,7 +509,7 @@ function AddRepoSection({ teamId }: { teamId: Id<"teams"> }) {
           to browse repos, or{" "}
           <button
             onClick={() => setShowManual(true)}
-            className="text-zinc-300 underline"
+            className="text-paper-700 underline"
           >
             enter manually
           </button>
@@ -566,12 +566,12 @@ function InviteSection({ teamId }: { teamId: Id<"teams"> }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email address"
-          className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+          className="flex-1 rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
         />
         <button
           type="submit"
           disabled={inviting || !email.trim()}
-          className="rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+          className="rounded-md bg-paper-700 px-3 py-2 text-sm font-medium text-paper-5000 hover:bg-zinc-200 disabled:opacity-50"
         >
           {inviting ? "Sending..." : "Send Invite"}
         </button>
@@ -580,15 +580,15 @@ function InviteSection({ teamId }: { teamId: Id<"teams"> }) {
         <p className="px-4 pb-2 text-xs text-red-400">{error}</p>
       )}
       {invites && invites.length > 0 ? (
-        <ul className="divide-y divide-zinc-800 border-t border-zinc-800">
+        <ul className="divide-y divide-zinc-800 border-t border-paper-300">
           {invites.map((invite) => (
             <li
               key={invite._id}
               className="flex items-center justify-between px-4 py-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-zinc-300">{invite.email}</p>
-                <p className="text-xs text-zinc-500">Pending invite</p>
+                <p className="truncate text-sm text-paper-700">{invite.email}</p>
+                <p className="text-xs text-paper-500">Pending invite</p>
               </div>
               <button
                 onClick={() => handleCancel(invite._id)}
@@ -601,7 +601,7 @@ function InviteSection({ teamId }: { teamId: Id<"teams"> }) {
           ))}
         </ul>
       ) : invites ? (
-        <div className="border-t border-zinc-800 px-4 py-3 text-sm text-zinc-500">
+        <div className="border-t border-paper-300 px-4 py-3 text-sm text-paper-500">
           No pending invites
         </div>
       ) : null}
@@ -635,28 +635,28 @@ export default function TeamManagementPage() {
     <div className="mx-auto max-w-3xl px-6 py-10">
       <Link
         href="/home"
-        className="text-sm text-zinc-400 hover:text-zinc-200"
+        className="text-sm text-paper-600 hover:text-paper-950"
       >
         &larr; Back to dashboard
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-zinc-100">{team.name}</h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <h1 className="mt-4 text-2xl font-bold text-paper-900">{team.name}</h1>
+      <p className="mt-1 text-sm text-paper-500">
         Team management {isOwner ? "(Owner)" : "(Member)"}
       </p>
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">Members</h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+        <h2 className="text-lg font-semibold text-paper-800">Members</h2>
+        <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
           <MembersList teamId={teamId} isOwner={isOwner} />
         </div>
       </div>
 
       {isOwner && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-zinc-200">
+          <h2 className="text-lg font-semibold text-paper-800">
             Invite Members
           </h2>
-          <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+          <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
             <InviteSection teamId={teamId} />
           </div>
         </div>
@@ -664,43 +664,43 @@ export default function TeamManagementPage() {
 
       {isOwner && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-zinc-200">Settings</h2>
-          <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+          <h2 className="text-lg font-semibold text-paper-800">Settings</h2>
+          <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
             <Link
               href={`/team/${teamId}/llm-settings`}
-              className="flex items-center justify-between px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800/50"
+              className="flex items-center justify-between px-4 py-3 text-sm text-paper-700 hover:bg-paper-300/50"
             >
               <div>
-                <p className="font-medium text-zinc-200">LLM Settings</p>
-                <p className="mt-0.5 text-xs text-zinc-500">
+                <p className="font-medium text-paper-800">LLM Settings</p>
+                <p className="mt-0.5 text-xs text-paper-500">
                   Configure a custom AI provider and API key
                 </p>
               </div>
-              <span className="text-zinc-500">&rarr;</span>
+              <span className="text-paper-500">&rarr;</span>
             </Link>
-            <div className="border-t border-zinc-800" />
+            <div className="border-t border-paper-300" />
             <Link
               href={`/team/${teamId}/deploy-keys`}
-              className="flex items-center justify-between px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800/50"
+              className="flex items-center justify-between px-4 py-3 text-sm text-paper-700 hover:bg-paper-300/50"
             >
               <div>
-                <p className="font-medium text-zinc-200">Fly.io Deploy Keys</p>
-                <p className="mt-0.5 text-xs text-zinc-500">
+                <p className="font-medium text-paper-800">Fly.io Deploy Keys</p>
+                <p className="mt-0.5 text-xs text-paper-500">
                   Manage deploy keys for server-side runtime
                 </p>
               </div>
-              <span className="text-zinc-500">&rarr;</span>
+              <span className="text-paper-500">&rarr;</span>
             </Link>
           </div>
         </div>
       )}
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">Repositories</h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+        <h2 className="text-lg font-semibold text-paper-800">Repositories</h2>
+        <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
           <RepoList teamId={teamId} isOwner={isOwner} />
           {isOwner && (
-            <div className="border-t border-zinc-800">
+            <div className="border-t border-paper-300">
               <AddRepoSection teamId={teamId} />
             </div>
           )}

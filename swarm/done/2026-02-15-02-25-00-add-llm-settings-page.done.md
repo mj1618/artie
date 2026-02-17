@@ -157,7 +157,7 @@ if (team?.llmProvider && team?.llmApiKey) {
 
 ### 6. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -181,7 +181,7 @@ if (team?.llmProvider && team?.llmApiKey) {
 6. Team management page has a link to LLM settings (owner-only)
 7. `convex/ai.ts` resolves the correct LLM provider based on team config
 8. Falls back to platform default Anthropic when no custom config is set
-9. `npm -s convex codegen` completes successfully
+9. `npx convex dev --once` completes successfully
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

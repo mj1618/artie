@@ -69,7 +69,7 @@ The flow becomes:
 
 ### 3. Run codegen and verify
 
-- Run `npm -s convex codegen` to register the new `ai` module
+- Run `npx convex dev --once` to register the new `ai` module
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -84,7 +84,7 @@ The flow becomes:
 1. When a user sends a message, a mock assistant response automatically appears after it in the chat
 2. The assistant response is displayed left-aligned with "Artie" label (existing MessageBubble styling)
 3. The mock response references the user's message content to demonstrate the input → output flow
-4. `npm -s convex codegen` completes successfully
+4. `npx convex dev --once` completes successfully
 5. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 6. The send button remains disabled while both the user message send AND the AI response generation are in progress
 7. No existing functionality is broken — layout, session creation, message display all still work

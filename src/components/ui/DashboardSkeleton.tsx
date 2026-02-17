@@ -11,7 +11,7 @@ export function PageHeaderSkeleton() {
 
 export function CardSkeleton({ lines = 3 }: { lines?: number }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-6">
+    <div className="rounded-lg border border-paper-300 bg-paper-200 p-6">
       <Skeleton className="h-5 w-32" />
       <div className="mt-4 space-y-3">
         {Array.from({ length: lines }).map((_, i) => (

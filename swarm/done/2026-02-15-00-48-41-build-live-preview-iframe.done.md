@@ -144,7 +144,7 @@ export default function Home() {
 
 ### 7. Run codegen and verify
 
-- Run `npm -s convex codegen` after schema changes
+- Run `npx convex dev --once` after schema changes
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -168,7 +168,7 @@ export default function Home() {
 6. The status bar shows "Preview ready" when code exists, "No preview available" when empty
 7. The empty state is shown when no preview code exists yet (before first AI response)
 8. The iframe is sandboxed (`sandbox="allow-scripts"`) for security
-9. `npm -s convex codegen` completes successfully
+9. `npx convex dev --once` completes successfully
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 11. No existing functionality is broken — chat send/receive still works
 

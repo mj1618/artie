@@ -211,7 +211,7 @@ When an assistant message has `changes.files`, show a list of changed files belo
 
 ### 7. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -234,7 +234,7 @@ When an assistant message has `changes.files`, show a list of changed files belo
 6. After files are written, the dev server hot-reloads (no additional work needed — this happens automatically)
 7. Assistant messages with file changes show the list of changed file paths
 8. The explanation text (from `<explanation>` block) is still displayed as the message content
-9. `npm -s convex codegen` completes successfully
+9. `npx convex dev --once` completes successfully
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes
@@ -289,5 +289,5 @@ Checks performed:
 - `src/components/chat/MessageBubble.tsx` — Push button, commit status, PR links all correctly implemented.
 - `convex/github.ts` — `pushChanges` has explicit return type to avoid circular inference.
 - `npm -s tsc -p tsconfig.json --noEmit` — passes
-- `npm -s convex codegen` — passes
+- `npx convex dev --once` — passes
 - No fixes needed

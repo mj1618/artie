@@ -36,6 +36,14 @@ export const get = query({
   },
 });
 
+// Alias for consistency with other modules
+export const getById = query({
+  args: { fileChangeId: v.id("fileChanges") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get("fileChanges", args.fileChangeId);
+  },
+});
+
 export const getFileChanges = query({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {

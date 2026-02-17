@@ -51,7 +51,7 @@ export default defineSchema({
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
     connectedBy: v.string(),
     connectedAt: v.number(),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"))),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"))),
     hasConvex: v.optional(v.boolean()),
     projectType: v.optional(v.string()),
     externalConvexUrl: v.optional(v.string()),
@@ -106,6 +106,27 @@ export default defineSchema({
     .index("by_sessionId", ["sessionId"])
     .index("by_messageId", ["messageId"]),
 
+  bashCommands: defineTable({
+    sessionId: v.id("sessions"),
+    messageId: v.id("messages"),
+    command: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    output: v.optional(v.string()),
+    exitCode: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_messageId", ["messageId"])
+    .index("by_status", ["status"]),
+
   templateProjects: defineTable({
     teamId: v.id("teams"),
     name: v.string(),
@@ -153,6 +174,20 @@ export default defineSchema({
     ),
     // Public URL for the preview
     previewUrl: v.optional(v.string()),
+    // Internal API URL for file operations (e.g., http://[app].internal:3001)
+    apiUrl: v.optional(v.string()),
+    // Secret for API authentication
+    apiSecret: v.optional(v.string()),
+    // Clone status: tracks whether the repo has been cloned and deps installed
+    cloneStatus: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("cloning"),
+        v.literal("installing"),
+        v.literal("ready"),
+        v.literal("failed")
+      )
+    ),
     // Fly.io machine ID
     machineId: v.optional(v.string()),
     // Error message if status is error
@@ -168,4 +203,84 @@ export default defineSchema({
     .index("by_repoId", ["repoId"])
     .index("by_appName", ["appName"])
     .index("by_status", ["status"]),
+
+  // DigitalOcean Droplets - ephemeral VMs for server-side previews
+  // More rigorous state management than Fly.io sprites
+  droplets: defineTable({
+    // Identifiers
+    sessionId: v.id("sessions"),
+    repoId: v.id("repos"),
+    teamId: v.id("teams"),
+    userId: v.string(),
+
+    // DigitalOcean metadata
+    dropletId: v.optional(v.string()), // DO droplet ID
+    dropletName: v.string(), // Unique name
+    ipv4Address: v.optional(v.string()),
+    region: v.string(),
+    size: v.string(),
+
+    // Single unified status field (state machine)
+    status: v.union(
+      v.literal("requested"), // DB record created, waiting for scheduler
+      v.literal("creating"), // DO API call in progress
+      v.literal("create_failed"), // DO API failed (will retry)
+      v.literal("provisioning"), // Droplet created, waiting for active
+      v.literal("booting"), // Droplet active, container starting
+      v.literal("cloning"), // Cloning repository
+      v.literal("installing"), // Installing dependencies
+      v.literal("ready"), // Ready but no recent heartbeat
+      v.literal("active"), // Ready with recent heartbeat
+      v.literal("stopping"), // Stop requested
+      v.literal("destroying"), // DO deletion in progress
+      v.literal("destroyed"), // Fully cleaned up
+      v.literal("unhealthy") // Health check failed, pending cleanup
+    ),
+
+    // URLs & auth
+    previewUrl: v.optional(v.string()),
+    apiUrl: v.optional(v.string()),
+    apiSecret: v.string(), // Use crypto.randomUUID()
+
+    // Error handling
+    errorMessage: v.optional(v.string()),
+    retryCount: v.number(),
+    lastRetryAt: v.optional(v.number()),
+
+    // Timestamps for lifecycle management
+    createdAt: v.number(),
+    statusChangedAt: v.number(), // When status last changed
+    lastHeartbeatAt: v.optional(v.number()),
+    lastHealthCheckAt: v.optional(v.number()),
+    destroyedAt: v.optional(v.number()),
+
+    // Audit trail
+    statusHistory: v.array(
+      v.object({
+        status: v.string(),
+        timestamp: v.number(),
+        reason: v.optional(v.string()),
+      })
+    ),
+
+    // Repository context
+    branch: v.optional(v.string()),
+    commitSha: v.optional(v.string()),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_repoId", ["repoId"])
+    .index("by_repoId_branch", ["repoId", "branch"])
+    .index("by_teamId", ["teamId"])
+    .index("by_dropletId", ["dropletId"])
+    .index("by_dropletName", ["dropletName"])
+    .index("by_status", ["status"])
+    .index("by_status_and_statusChangedAt", ["status", "statusChangedAt"]),
+
+  // Droplet quotas per team
+  dropletQuotas: defineTable({
+    teamId: v.id("teams"),
+    maxDroplets: v.number(), // Default: 5
+    currentActive: v.number(),
+    lastUpdatedAt: v.number(),
+  }).index("by_teamId", ["teamId"]),
 });

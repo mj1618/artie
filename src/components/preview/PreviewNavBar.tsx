@@ -75,12 +75,12 @@ export function PreviewNavBar({
   }
 
   return (
-    <div className="flex items-center gap-1.5 border-b border-zinc-700 bg-zinc-900 px-2 py-1.5">
+    <div className="flex items-center gap-1.5 border-b border-paper-400 bg-paper-200 px-2 py-1.5">
       {/* Back */}
       <button
         onClick={handleBack}
         title="Back"
-        className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+        className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +100,7 @@ export function PreviewNavBar({
       <button
         onClick={handleForward}
         title="Forward"
-        className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+        className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -120,7 +120,7 @@ export function PreviewNavBar({
       <button
         onClick={handleRefresh}
         title="Refresh"
-        className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+        className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -142,10 +142,10 @@ export function PreviewNavBar({
           onClick={onRefreshFromGitHub}
           disabled={refreshing}
           title="Pull latest files from GitHub"
-          className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {refreshing ? (
-            <div className="h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-zinc-500 border-t-zinc-200" />
+            <div className="h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-paper-500 border-t-paper-800" />
           ) : (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -166,7 +166,7 @@ export function PreviewNavBar({
           type="text"
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
-          className="w-full rounded bg-zinc-800 px-2.5 py-1 font-mono text-xs text-zinc-300 outline-none ring-1 ring-zinc-700 focus:ring-zinc-500"
+          className="w-full rounded bg-paper-300 px-2.5 py-1 font-mono text-xs text-paper-700 outline-none ring-1 ring-paper-400 focus:ring-paper-500"
           spellCheck={false}
         />
       </form>
@@ -175,7 +175,7 @@ export function PreviewNavBar({
       <button
         onClick={handleOpenInNewTab}
         title="Open in new tab"
-        className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+        className="rounded p-1 text-paper-600 hover:bg-paper-300 hover:text-paper-800"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

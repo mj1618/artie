@@ -43,7 +43,7 @@ export function MessageList({
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-4">
-        <p className="text-center text-sm text-zinc-400">
+        <p className="text-center text-sm text-paper-600">
           Start a conversation to preview and edit your code
         </p>
       </div>

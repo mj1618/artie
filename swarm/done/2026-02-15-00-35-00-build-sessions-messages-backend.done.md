@@ -71,7 +71,7 @@ For now, create a simple query that will support the workspace:
 
 ### 4. Run Convex codegen
 
-After creating all backend files, run `npm -s convex codegen` to regenerate the `_generated` directory so the new API endpoints are available.
+After creating all backend files, run `npx convex dev --once` to regenerate the `_generated` directory so the new API endpoints are available.
 
 ### 5. Verify TypeScript compiles
 
@@ -93,7 +93,7 @@ Run `npm -s tsc -p tsconfig.json --noEmit` to ensure no TS errors across both th
 4. All mutations use appropriate `v.id()` validators for document ID args (e.g., `v.id("sessions")`, `v.id("repos")`)
 5. All queries use the correct indexes defined in the schema
 6. The `send` mutation also updates the session's `lastActiveAt` field
-7. `npm -s convex codegen` completes successfully
+7. `npx convex dev --once` completes successfully
 8. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 9. No existing files are broken — the layout, schema, and components all still work
 

@@ -123,7 +123,7 @@ Below `<TeamRepos teamId={team._id} />`, add `<TemplateProjects teamId={team._id
 
 ### 5. Verify
 
-- Run `npm -s convex codegen` to regenerate types
+- Run `npx convex dev --once` to regenerate types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -143,7 +143,7 @@ Below `<TeamRepos teamId={team._id} />`, add `<TemplateProjects teamId={team._id
 7. Template projects are displayed in each team card (below GitHub repos)
 8. Template projects show name, template type, and status (with color-coded status badge)
 9. Toast notifications for success/error on project creation
-10. `npm -s convex codegen` succeeds
+10. `npx convex dev --once` succeeds
 11. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

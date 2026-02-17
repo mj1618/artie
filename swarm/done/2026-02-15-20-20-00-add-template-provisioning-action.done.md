@@ -143,7 +143,7 @@ If the template UI isn't built yet, just ensure the action exists and works — 
 
 ### 4. Verify
 
-- Run `npm -s convex codegen` to regenerate types (the new `templateActions.ts` file needs to be picked up)
+- Run `npx convex dev --once` to regenerate types (the new `templateActions.ts` file needs to be picked up)
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -161,7 +161,7 @@ If the template UI isn't built yet, just ensure the action exists and works — 
 4. The action sets status to "active" on success
 5. The action sets status to "error" with an error message on failure
 6. If the template creation UI exists in `home/page.tsx`, it calls the provisioning action after creating a project
-7. `npm -s convex codegen` succeeds
+7. `npx convex dev --once` succeeds
 8. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

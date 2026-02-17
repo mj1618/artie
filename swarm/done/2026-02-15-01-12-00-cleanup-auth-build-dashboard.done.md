@@ -123,7 +123,7 @@ Verify that `listMyTeams` returns enough data for the dashboard. It should retur
 
 ### 7. Run codegen and verify
 
-- Run `npm -s convex codegen` if schema changed
+- Run `npx convex dev --once` if schema changed
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

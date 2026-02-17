@@ -193,5 +193,5 @@ Checks performed:
 - `src/components/chat/MarkdownContent.tsx` — `"use client"` directive present (required — uses `react-markdown` which is client-side). Props interface correctly typed. `remarkGfm` plugin configured. Code block detection via `className?.startsWith("language-")` correctly distinguishes inline vs block code. All HTML element overrides (pre, code, p, ul, ol, li, h1-h3, strong, a, blockquote, table, th, td) have appropriate Tailwind styling. Links use `target="_blank"` with `rel="noopener noreferrer"` (safe). No XSS risk — `react-markdown` doesn't render raw HTML by default.
 - `src/components/chat/MessageBubble.tsx` — `"use client"` directive present. `MarkdownContent` imported from correct `@/` path. Conditional rendering: user messages use `whitespace-pre-wrap` span (plain text), assistant messages use `<MarkdownContent>`. All other existing functionality (changes badges, push button, PR links, ChangePreview) preserved correctly.
 - `npm -s tsc -p tsconfig.json --noEmit` — passes with zero errors
-- `npm -s convex codegen` — passes
+- `npx convex dev --once` — passes
 - No fixes needed — all code is clean

@@ -1,0 +1,14 @@
+{
+  "name": "sprite-server",
+  "version": "1.0.0",
+  "description": "API server for Fly.io Sprite containers",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "glob": "^11.0.0"
+  }
+}

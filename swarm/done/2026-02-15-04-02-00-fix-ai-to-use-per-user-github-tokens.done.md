@@ -51,7 +51,7 @@ const octokit = new Octokit({ auth: userToken || process.env.GITHUB_TOKEN });
 
 ### 3. Run codegen and verify
 
-- Run `npm -s convex codegen` if any new exports were added
+- Run `npx convex dev --once` if any new exports were added
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

@@ -1,0 +1,14 @@
+# This fly.toml is only used for building and pushing the image
+# The actual machines are created dynamically via the API
+
+app = "artie-sprite-base"
+primary_region = "ewr"
+
+[build]
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0

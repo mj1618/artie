@@ -163,7 +163,7 @@ On `src/app/(dashboard)/page.tsx`, add a small "Manage" link/button next to each
 
 ### 4. Run codegen and verify
 
-- Run `npm -s convex codegen` after adding the new backend functions
+- Run `npx convex dev --once` after adding the new backend functions
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -182,7 +182,7 @@ On `src/app/(dashboard)/page.tsx`, add a small "Manage" link/button next to each
 4. Non-owner members can see the member list but not the invite/remove controls
 5. Dashboard has a "Manage" link on each team card pointing to `/team/[teamId]`
 6. Auth guard: unauthenticated users can't access the page; non-members get an empty/error state
-7. `npm -s convex codegen` completes successfully
+7. `npx convex dev --once` completes successfully
 8. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

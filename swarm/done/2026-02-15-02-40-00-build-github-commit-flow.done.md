@@ -167,7 +167,7 @@ When an assistant message has `changes` with `committed === false`, show an "App
 
 ### 5. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -190,7 +190,7 @@ When an assistant message has `changes` with `committed === false`, show an "App
 7. MessageBubble shows commit SHA or PR link after successful push
 8. Loading state shown during push operation
 9. Error handling for push failures (network, auth, merge conflicts)
-10. `npm -s convex codegen` completes successfully
+10. `npx convex dev --once` completes successfully
 11. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes
@@ -253,5 +253,5 @@ Checks performed:
 - `src/components/chat/ChatPanel.tsx` — `listBySession` subscription builds `fileChangesByMessageId` map. All props passed through correctly.
 - `src/components/layout/Sidebar.tsx` — Import path fix from `@/convex/` to relative path (correct for convex directory outside src/).
 - `npm -s tsc -p tsconfig.json --noEmit` — passes
-- `npm -s convex codegen` — passes
+- `npx convex dev --once` — passes
 - No fixes needed

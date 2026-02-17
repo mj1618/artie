@@ -157,7 +157,7 @@ export default function DashboardPage() {
 
 ### 4. Run codegen and verify
 
-- Run `npm -s convex codegen` to regenerate API types
+- Run `npx convex dev --once` to regenerate API types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

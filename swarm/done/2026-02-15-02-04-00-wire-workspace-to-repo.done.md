@@ -70,7 +70,7 @@ export const create = mutation({
 
 ### 5. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -90,7 +90,7 @@ export const create = mutation({
 4. ChatPanel creates a real session tied to the repo and authenticated user
 5. If the repo ID is invalid, the user sees a "not found" message with a link to the dashboard
 6. `convex/sessions.ts` `create` mutation derives userId from auth context
-7. `npm -s convex codegen` completes successfully
+7. `npx convex dev --once` completes successfully
 8. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

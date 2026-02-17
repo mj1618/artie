@@ -21,8 +21,8 @@ function NavItem({
       href={href}
       className={`block rounded px-3 py-2 text-sm ${
         active
-          ? "bg-zinc-800 text-white"
-          : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+          ? "bg-paper-300 text-paper-950"
+          : "text-paper-600 hover:bg-paper-300/50 hover:text-paper-950"
       }`}
     >
       {label}
@@ -47,8 +47,8 @@ function TeamRepos({ teamId }: { teamId: Id<"teams"> }) {
             href={repoHref}
             className={`block rounded px-3 py-1.5 text-xs ${
               isActive
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
+                ? "bg-paper-300 text-paper-950"
+                : "text-paper-500 hover:bg-paper-300/50 hover:text-paper-700"
             }`}
           >
             {repo.githubOwner}/{repo.githubRepo}
@@ -64,7 +64,7 @@ export function Sidebar() {
   const teams = useQuery(api.teams.listMyTeams);
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900">
+    <aside className="flex w-56 shrink-0 flex-col border-r border-paper-300 bg-paper-200">
       <nav className="flex-1 overflow-y-auto p-3">
         <div className="space-y-1">
           <NavItem href="/home" label="Home" active={pathname === "/home"} />
@@ -82,12 +82,12 @@ export function Sidebar() {
 
         <div className="mt-6">
           <div className="flex items-center justify-between px-3 pb-2">
-            <span className="text-xs font-medium tracking-wider text-zinc-500 uppercase">
+            <span className="text-xs font-medium tracking-wider text-paper-500 uppercase">
               Teams
             </span>
             <Link
               href="/home"
-              className="text-zinc-500 hover:text-white"
+              className="text-paper-500 hover:text-paper-950"
               title="Create team"
             >
               <svg
@@ -114,7 +114,7 @@ export function Sidebar() {
               </div>
             </div>
           ) : teams.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-zinc-600">No teams yet</div>
+            <div className="px-3 py-2 text-xs text-paper-500">No teams yet</div>
           ) : (
             <div className="space-y-3">
               {teams.map((team) => {
@@ -126,8 +126,8 @@ export function Sidebar() {
                       href={teamHref}
                       className={`block rounded px-3 py-2 text-sm font-medium ${
                         isTeamActive
-                          ? "bg-zinc-800 text-white"
-                          : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+                          ? "bg-paper-300 text-paper-950"
+                          : "text-paper-600 hover:bg-paper-300/50 hover:text-paper-950"
                       }`}
                     >
                       {team.name}
@@ -137,8 +137,8 @@ export function Sidebar() {
                         href={`/team/${team._id}/llm-settings`}
                         className={`block rounded px-3 py-1.5 text-xs ${
                           pathname === `/team/${team._id}/llm-settings`
-                            ? "bg-zinc-800 text-white"
-                            : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
+                            ? "bg-paper-300 text-paper-950"
+                            : "text-paper-500 hover:bg-paper-300/50 hover:text-paper-700"
                         }`}
                       >
                         LLM Settings
@@ -147,8 +147,8 @@ export function Sidebar() {
                         href={`/team/${team._id}/deploy-keys`}
                         className={`block rounded px-3 py-1.5 text-xs ${
                           pathname === `/team/${team._id}/deploy-keys`
-                            ? "bg-zinc-800 text-white"
-                            : "text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300"
+                            ? "bg-paper-300 text-paper-950"
+                            : "text-paper-500 hover:bg-paper-300/50 hover:text-paper-700"
                         }`}
                       >
                         Deploy Keys

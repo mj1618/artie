@@ -71,14 +71,14 @@ function NewFeatureDialog({
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-900 p-6 shadow-xl animate-dialog-in">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+      <div className="w-full max-w-md rounded-lg border border-paper-400 bg-paper-200 p-6 shadow-xl animate-dialog-in">
+        <h2 className="mb-4 text-lg font-semibold text-paper-950">
           New Feature
         </h2>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-paper-700">
               Feature name
             </label>
             <input
@@ -87,7 +87,7 @@ function NewFeatureDialog({
               onChange={(e) => setFeatureName(e.target.value)}
               placeholder="e.g. Update hero section"
               autoFocus
-              className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-zinc-400"
+              className="w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-2 text-sm text-paper-950 placeholder:text-paper-500 outline-none focus:border-paper-500"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && canCreate) {
                   onCreate(featureName.trim(), branchName.trim());
@@ -97,7 +97,7 @@ function NewFeatureDialog({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-paper-700">
               Branch name
             </label>
             <input
@@ -108,14 +108,14 @@ function NewFeatureDialog({
                 setBranchEdited(true);
               }}
               placeholder="feature/update-hero-section"
-              className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-500 outline-none focus:border-zinc-400"
+              className="w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-2 text-sm font-mono text-paper-950 placeholder:text-paper-500 outline-none focus:border-paper-500"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && canCreate) {
                   onCreate(featureName.trim(), branchName.trim());
                 }
               }}
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-paper-500">
               Branch will be created on GitHub when you push changes.
             </p>
           </div>
@@ -124,7 +124,7 @@ function NewFeatureDialog({
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-sm text-zinc-400 hover:text-white"
+            className="rounded-md px-3 py-1.5 text-sm text-paper-600 hover:text-paper-950"
           >
             Cancel
           </button>
@@ -135,7 +135,7 @@ function NewFeatureDialog({
               }
             }}
             disabled={!canCreate}
-            className="rounded-md bg-white px-4 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-md bg-paper-700 px-4 py-1.5 text-sm font-medium text-paper-50 hover:bg-paper-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Create
           </button>
@@ -149,8 +149,8 @@ export default function WorkspacePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center bg-zinc-950">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+        <div className="flex h-screen items-center justify-center bg-paper-100">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-paper-400 border-t-white" />
         </div>
       }
     >
@@ -276,8 +276,8 @@ function WorkspacePageInner() {
 
   if (authLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+      <div className="flex h-screen items-center justify-center bg-paper-100">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-paper-400 border-t-white" />
       </div>
     );
   }
@@ -289,8 +289,8 @@ function WorkspacePageInner() {
 
   if (repo === undefined || sessions === undefined || !runtimeReady) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+      <div className="flex h-screen items-center justify-center bg-paper-100">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-paper-400 border-t-white" />
       </div>
     );
   }

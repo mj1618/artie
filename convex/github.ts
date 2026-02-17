@@ -86,7 +86,8 @@ async function refreshGithubToken(refreshToken: string): Promise<{
 
 /**
  * Get the user's GitHub token, refreshing if expired.
- * Returns undefined if no token or refresh fails.
+ * Returns undefined if no token available.
+ * Throws an error if token refresh fails (user needs to reconnect).
  */
 async function getUserGithubToken(ctx: ActionCtx): Promise<string | undefined> {
   const profile = await ctx.runQuery(api.users.getProfile);
@@ -104,14 +105,20 @@ async function getUserGithubToken(ctx: ActionCtx): Promise<string | undefined> {
 
     if (!profile.githubRefreshToken) {
       console.warn("[getUserGithubToken] No refresh token available");
-      return undefined;
+      throw new Error(
+        "Your GitHub connection has expired. Please reconnect your GitHub account in Settings.",
+      );
     }
 
     const newTokens = await refreshGithubToken(profile.githubRefreshToken);
 
     if (!newTokens) {
       console.error("[getUserGithubToken] Failed to refresh token");
-      return undefined;
+      // Clear the invalid tokens so user knows to reconnect
+      await ctx.runMutation(api.users.disconnectGithub);
+      throw new Error(
+        "Your GitHub connection has expired and could not be refreshed. Please reconnect your GitHub account in Settings.",
+      );
     }
 
     // Update the stored tokens

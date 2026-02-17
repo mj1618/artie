@@ -10,7 +10,12 @@
 
 import type * as ai from "../ai.js";
 import type * as auth from "../auth.js";
+import type * as bashCommands from "../bashCommands.js";
+import type * as crons from "../crons.js";
 import type * as deployKeys from "../deployKeys.js";
+import type * as dropletFiles from "../dropletFiles.js";
+import type * as dropletScheduler from "../dropletScheduler.js";
+import type * as droplets from "../droplets.js";
 import type * as fileChanges from "../fileChanges.js";
 import type * as flyioSprites from "../flyioSprites.js";
 import type * as github from "../github.js";
@@ -18,6 +23,7 @@ import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as projects from "../projects.js";
 import type * as sessions from "../sessions.js";
+import type * as spriteFiles from "../spriteFiles.js";
 import type * as teams from "../teams.js";
 import type * as templateActions from "../templateActions.js";
 import type * as templates from "../templates.js";
@@ -32,7 +38,12 @@ import type {
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   auth: typeof auth;
+  bashCommands: typeof bashCommands;
+  crons: typeof crons;
   deployKeys: typeof deployKeys;
+  dropletFiles: typeof dropletFiles;
+  dropletScheduler: typeof dropletScheduler;
+  droplets: typeof droplets;
   fileChanges: typeof fileChanges;
   flyioSprites: typeof flyioSprites;
   github: typeof github;
@@ -40,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   projects: typeof projects;
   sessions: typeof sessions;
+  spriteFiles: typeof spriteFiles;
   teams: typeof teams;
   templateActions: typeof templateActions;
   templates: typeof templates;

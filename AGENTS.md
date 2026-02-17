@@ -18,7 +18,7 @@ We're on React 19 which has automatic memoization for `useMemo` and `useCallback
 
 # Commands
 
-Use `npm -s convex codegen` for convex codegen.
+Use `npx convex dev --once` for convex codegen.
 Don't rm the \_generated directory before building.
 Don't disable typecheck.
 

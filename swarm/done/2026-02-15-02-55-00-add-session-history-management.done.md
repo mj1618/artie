@@ -108,7 +108,7 @@ Add a query or modify `listByRepo` to include the first message of each session 
 
 ### 8. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -132,7 +132,7 @@ Add a query or modify `listByRepo` to include the first message of each session 
 6. `lastActiveAt` is updated whenever a message is sent
 7. `firstMessage` field is set on the session when the first user message is sent
 8. Workspace page defaults to the most recent session on load
-9. `npm -s convex codegen` passes
+9. `npx convex dev --once` passes
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

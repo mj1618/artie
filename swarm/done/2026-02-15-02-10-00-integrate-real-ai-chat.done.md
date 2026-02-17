@@ -142,7 +142,7 @@ The `ANTHROPIC_API_KEY` environment variable needs to be set in the Convex dashb
 
 ### 6. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -161,7 +161,7 @@ The `ANTHROPIC_API_KEY` environment variable needs to be set in the Convex dashb
 4. Recent message history (last 10 messages) is sent as context to the LLM
 5. If the LLM call fails, an error message is stored as the assistant response (no crash)
 6. `convex/sessions.ts` has an `updatePreviewCode` mutation
-7. `npm -s convex codegen` completes successfully
+7. `npx convex dev --once` completes successfully
 8. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

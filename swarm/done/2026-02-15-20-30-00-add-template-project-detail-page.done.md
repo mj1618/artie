@@ -118,7 +118,7 @@ The list item `<li>` should become (or be wrapped by) a Next.js `<Link>`:
 
 ### 4. Verify
 
-- Run `npm -s convex codegen` to regenerate types
+- Run `npx convex dev --once` to regenerate types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -141,7 +141,7 @@ The list item `<li>` should become (or be wrapped by) a Next.js `<Link>`:
 9. Non-owners see all info as read-only with no danger zone
 10. Template projects on the dashboard home page are clickable and link to the detail page
 11. Loading and not-found states are handled gracefully
-12. `npm -s convex codegen` succeeds
+12. `npx convex dev --once` succeeds
 13. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

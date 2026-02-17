@@ -62,7 +62,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${styles[status] ?? "bg-zinc-700 text-zinc-400"}`}
+      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${styles[status] ?? "bg-paper-400 text-paper-600"}`}
     >
       {status}
     </span>
@@ -72,7 +72,7 @@ function StatusBadge({ status }: { status: string }) {
 function PatchView({ patch }: { patch: string }) {
   if (!patch) {
     return (
-      <div className="px-3 py-4 text-center text-xs text-zinc-500">
+      <div className="px-3 py-4 text-center text-xs text-paper-500">
         Binary file or no diff available
       </div>
     );
@@ -83,10 +83,10 @@ function PatchView({ patch }: { patch: string }) {
   return (
     <pre className="overflow-x-auto text-xs leading-relaxed">
       {lines.map((line, i) => {
-        let className = "px-3 text-zinc-300";
+        let className = "px-3 text-paper-700";
         if (line.startsWith("@@")) {
           className =
-            "px-3 bg-zinc-700/50 text-zinc-400";
+            "px-3 bg-paper-400/50 text-paper-600";
         } else if (line.startsWith("+")) {
           className = "px-3 bg-green-950/30 text-green-300";
         } else if (line.startsWith("-")) {
@@ -106,8 +106,8 @@ function ReviewBadge({ state }: { state: string }) {
   const styles: Record<string, string> = {
     APPROVED: "bg-green-900/50 text-green-400",
     CHANGES_REQUESTED: "bg-red-900/50 text-red-400",
-    COMMENTED: "bg-zinc-700 text-zinc-400",
-    DISMISSED: "bg-zinc-700 text-zinc-400",
+    COMMENTED: "bg-paper-400 text-paper-600",
+    DISMISSED: "bg-paper-400 text-paper-600",
   };
   const labels: Record<string, string> = {
     APPROVED: "Approved",
@@ -117,7 +117,7 @@ function ReviewBadge({ state }: { state: string }) {
   };
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${styles[state] ?? "bg-zinc-700 text-zinc-400"}`}
+      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${styles[state] ?? "bg-paper-400 text-paper-600"}`}
     >
       {labels[state] ?? state}
     </span>
@@ -265,7 +265,7 @@ export default function PRReviewPage() {
     return (
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-6">
-          <div className="h-4 w-32 rounded bg-zinc-800" />
+          <div className="h-4 w-32 rounded bg-paper-300" />
         </div>
         <CardSkeleton lines={2} />
         <div className="mt-4 space-y-3">
@@ -281,7 +281,7 @@ export default function PRReviewPage() {
       <div className="mx-auto max-w-5xl px-6 py-10">
         <Link
           href="/pull-requests"
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-paper-600 hover:text-paper-800"
         >
           &larr; Back to Pull Requests
         </Link>
@@ -301,10 +301,10 @@ export default function PRReviewPage() {
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col">
       {/* Tab bar */}
-      <div className="flex items-center border-b border-zinc-800 bg-zinc-900 px-4">
+      <div className="flex items-center border-b border-paper-300 bg-paper-200 px-4">
         <Link
           href="/pull-requests"
-          className="mr-4 text-sm text-zinc-400 hover:text-zinc-200"
+          className="mr-4 text-sm text-paper-600 hover:text-paper-800"
         >
           &larr;
         </Link>
@@ -313,7 +313,7 @@ export default function PRReviewPage() {
           className={`px-4 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "diff"
               ? "border-b-2 border-blue-500 text-blue-400"
-              : "text-zinc-400 hover:text-zinc-200"
+              : "text-paper-600 hover:text-paper-800"
           }`}
         >
           Diff ({pr.changedFiles} files)
@@ -326,12 +326,12 @@ export default function PRReviewPage() {
           className={`px-4 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "preview"
               ? "border-b-2 border-blue-500 text-blue-400"
-              : "text-zinc-400 hover:text-zinc-200"
+              : "text-paper-600 hover:text-paper-800"
           }`}
         >
           Live Preview
         </button>
-        <span className="ml-auto text-xs text-zinc-500">
+        <span className="ml-auto text-xs text-paper-500">
           {pr.repoFullName} #{pr.prNumber}
         </span>
       </div>
@@ -347,13 +347,13 @@ export default function PRReviewPage() {
             <div>
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold text-zinc-100">
+                  <h1 className="text-xl font-bold text-paper-900">
                     {pr.title}{" "}
-                    <span className="font-normal text-zinc-500">
+                    <span className="font-normal text-paper-500">
                       #{pr.prNumber}
                     </span>
                   </h1>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-paper-600">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         pr.merged
@@ -366,22 +366,22 @@ export default function PRReviewPage() {
                       {pr.merged ? "Merged" : pr.state}
                     </span>
                     {pr.isDraft && (
-                      <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-xs text-zinc-400">
+                      <span className="rounded-full bg-paper-400 px-2 py-0.5 text-xs text-paper-600">
                         Draft
                       </span>
                     )}
-                    <span className="text-zinc-500">
+                    <span className="text-paper-500">
                       {pr.author} wants to merge{" "}
-                      <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-300">
+                      <code className="rounded bg-paper-300 px-1.5 py-0.5 text-xs text-paper-700">
                         {pr.headBranch}
                       </code>{" "}
                       into{" "}
-                      <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-300">
+                      <code className="rounded bg-paper-300 px-1.5 py-0.5 text-xs text-paper-700">
                         {pr.baseBranch}
                       </code>
                     </span>
                   </div>
-                  <div className="mt-2 flex items-center gap-3 text-xs text-zinc-500">
+                  <div className="mt-2 flex items-center gap-3 text-xs text-paper-500">
                     <span>{pr.repoFullName}</span>
                     <span>
                       <span className="text-green-400">+{pr.additions}</span>{" "}
@@ -410,11 +410,11 @@ export default function PRReviewPage() {
 
             {/* PR Body */}
             {pr.body && (
-              <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                <h2 className="mb-3 text-sm font-semibold text-zinc-300">
+              <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-4">
+                <h2 className="mb-3 text-sm font-semibold text-paper-700">
                   Description
                 </h2>
-                <div className="text-sm text-zinc-300">
+                <div className="text-sm text-paper-700">
                   <MarkdownContent content={pr.body} />
                 </div>
               </div>
@@ -422,15 +422,15 @@ export default function PRReviewPage() {
 
             {/* Reviews */}
             {significantReviews.length > 0 && (
-              <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                <h2 className="mb-3 text-sm font-semibold text-zinc-300">Reviews</h2>
+              <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-4">
+                <h2 className="mb-3 text-sm font-semibold text-paper-700">Reviews</h2>
                 <div className="space-y-2">
                   {significantReviews.map((review, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm">
-                      <span className="text-zinc-300">{review.user}</span>
+                      <span className="text-paper-700">{review.user}</span>
                       <ReviewBadge state={review.state} />
                       {review.body && (
-                        <span className="truncate text-xs text-zinc-500">
+                        <span className="truncate text-xs text-paper-500">
                           {review.body}
                         </span>
                       )}
@@ -442,7 +442,7 @@ export default function PRReviewPage() {
 
             {/* File changes */}
             <div className="mt-6">
-              <h2 className="mb-3 text-sm font-semibold text-zinc-300">
+              <h2 className="mb-3 text-sm font-semibold text-paper-700">
                 Changed files ({pr.files.length})
               </h2>
               <div className="space-y-2">
@@ -451,11 +451,11 @@ export default function PRReviewPage() {
                   return (
                     <div
                       key={file.filename}
-                      className="overflow-hidden rounded-lg border border-zinc-800"
+                      className="overflow-hidden rounded-lg border border-paper-300"
                     >
                       <button
                         onClick={() => toggleFile(file.filename)}
-                        className="flex w-full items-center gap-2 bg-zinc-900 px-3 py-2 text-left text-sm hover:bg-zinc-800/50"
+                        className="flex w-full items-center gap-2 bg-paper-200 px-3 py-2 text-left text-sm hover:bg-paper-300/50"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -465,11 +465,11 @@ export default function PRReviewPage() {
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
-                          className={`shrink-0 text-zinc-500 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                          className={`shrink-0 text-paper-500 transition-transform ${isExpanded ? "rotate-90" : ""}`}
                         >
                           <polyline points="9 18 15 12 9 6" />
                         </svg>
-                        <span className="truncate font-mono text-xs text-zinc-300">
+                        <span className="truncate font-mono text-xs text-paper-700">
                           {file.previousFilename
                             ? `${file.previousFilename} → ${file.filename}`
                             : file.filename}
@@ -481,7 +481,7 @@ export default function PRReviewPage() {
                         </span>
                       </button>
                       {isExpanded && (
-                        <div className="border-t border-zinc-800 bg-zinc-950">
+                        <div className="border-t border-paper-300 bg-paper-100">
                           <PatchView patch={file.patch} />
                         </div>
                       )}
@@ -493,7 +493,7 @@ export default function PRReviewPage() {
 
             {/* Sticky merge controls */}
             {!pr.merged && pr.state === "open" && (
-              <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-zinc-900/95 backdrop-blur">
+              <div className="fixed bottom-0 left-0 right-0 border-t border-paper-300 bg-paper-200/95 backdrop-blur">
                 <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
                   <div className="flex items-center gap-4">
                     <MergeableIndicator
@@ -501,12 +501,12 @@ export default function PRReviewPage() {
                       mergeableState={pr.mergeableState}
                       merged={pr.merged}
                     />
-                    <label className="flex items-center gap-2 text-xs text-zinc-400">
+                    <label className="flex items-center gap-2 text-xs text-paper-600">
                       <input
                         type="checkbox"
                         checked={deleteBranch}
                         onChange={(e) => setDeleteBranch(e.target.checked)}
-                        className="rounded border-zinc-600 bg-zinc-800"
+                        className="rounded border-paper-400 bg-paper-300"
                       />
                       Delete branch after merge
                     </label>
@@ -522,7 +522,7 @@ export default function PRReviewPage() {
                     <select
                       value={mergeMethod}
                       onChange={(e) => setMergeMethod(e.target.value as MergeMethod)}
-                      className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300"
+                      className="rounded-md border border-paper-400 bg-paper-300 px-2 py-1.5 text-sm text-paper-700"
                     >
                       <option value="merge">Create merge commit</option>
                       <option value="squash">Squash and merge</option>

@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
@@ -110,6 +110,58 @@ export const disconnectGithub = mutation({
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (profile) {
+      await ctx.db.patch("userProfiles", profile._id, {
+        githubAccessToken: undefined,
+        githubRefreshToken: undefined,
+        githubTokenExpiresAt: undefined,
+        githubUsername: undefined,
+      });
+    }
+  },
+});
+
+// Internal query to get profile by user ID (for actions)
+export const getProfileById = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+  },
+});
+
+// Internal mutation to update GitHub tokens by user ID (for background actions)
+export const updateGithubTokensById = internalMutation({
+  args: {
+    userId: v.string(),
+    githubAccessToken: v.string(),
+    githubRefreshToken: v.optional(v.string()),
+    githubTokenExpiresAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+    if (!profile) throw new Error("Profile not found");
+    await ctx.db.patch("userProfiles", profile._id, {
+      githubAccessToken: args.githubAccessToken,
+      githubRefreshToken: args.githubRefreshToken,
+      githubTokenExpiresAt: args.githubTokenExpiresAt,
+    });
+  },
+});
+
+// Internal mutation to disconnect GitHub by user ID (for background actions)
+export const disconnectGithubById = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .unique();
     if (profile) {
       await ctx.db.patch("userProfiles", profile._id, {

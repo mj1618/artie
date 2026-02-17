@@ -72,7 +72,7 @@ The existing workspace page passes no branch (uses default). The PR review page 
 
 ### 3. Run codegen and verify
 
-- Run `npm -s convex codegen` to regenerate API types
+- Run `npx convex dev --once` to regenerate API types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

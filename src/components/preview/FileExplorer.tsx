@@ -61,14 +61,14 @@ function TreeNode({
     <div>
       <button
         onClick={() => (isDir ? onToggleDir(node.path) : onSelectFile(node.path))}
-        className={`flex w-full items-center gap-1 px-2 py-0.5 text-left text-xs font-mono hover:bg-zinc-200 dark:hover:bg-zinc-700 ${
+        className={`flex w-full items-center gap-1 px-2 py-0.5 text-left text-xs font-mono hover:bg-paper-600 dark:hover:bg-paper-400 ${
           isSelected
             ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-            : "text-zinc-700 dark:text-zinc-300"
+            : "text-paper-300 dark:text-paper-700"
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
-        <span className="shrink-0 w-3 text-center text-[10px] text-zinc-400">
+        <span className="shrink-0 w-3 text-center text-[10px] text-paper-600">
           {isDir ? (isExpanded ? "▼" : "▶") : ""}
         </span>
         <span className="truncate">{node.name}</span>
@@ -172,7 +172,7 @@ export function FileExplorer({ containerReady }: FileExplorerProps) {
   if (!containerReady) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-xs text-zinc-400">Waiting for container...</p>
+        <p className="text-xs text-paper-600">Waiting for container...</p>
       </div>
     );
   }
@@ -180,8 +180,8 @@ export function FileExplorer({ containerReady }: FileExplorerProps) {
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900 dark:border-zinc-600 dark:border-t-white" />
-        <p className="text-xs text-zinc-400">Loading file tree...</p>
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-paper-500 border-t-paper-200 dark:border-paper-400 dark:border-t-paper-950" />
+        <p className="text-xs text-paper-600">Loading file tree...</p>
       </div>
     );
   }
@@ -189,7 +189,7 @@ export function FileExplorer({ containerReady }: FileExplorerProps) {
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* File tree */}
-      <div className="w-56 shrink-0 overflow-auto border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="w-56 shrink-0 overflow-auto border-r border-paper-600 bg-paper-750 dark:border-paper-300 dark:bg-paper-200">
         {fileTree && fileTree.length > 0 ? (
           <div className="py-1">
             {fileTree.map((node) => (
@@ -205,22 +205,22 @@ export function FileExplorer({ containerReady }: FileExplorerProps) {
             ))}
           </div>
         ) : (
-          <div className="p-3 text-xs text-zinc-400">No files found</div>
+          <div className="p-3 text-xs text-paper-600">No files found</div>
         )}
       </div>
 
       {/* File viewer */}
-      <div className="flex flex-1 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+      <div className="flex flex-1 flex-col overflow-hidden bg-paper-750 dark:bg-paper-100">
         {selectedFile ? (
           <>
-            <div className="border-b border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
-              <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+            <div className="border-b border-paper-600 px-3 py-1.5 dark:border-paper-300">
+              <span className="font-mono text-xs text-paper-500 dark:text-paper-600">
                 {selectedFile}
               </span>
             </div>
             {fileLoading ? (
               <div className="flex flex-1 items-center justify-center">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900 dark:border-zinc-600 dark:border-t-white" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-paper-500 border-t-paper-200 dark:border-paper-400 dark:border-t-paper-950" />
               </div>
             ) : (
               <div className="flex-1 overflow-auto p-0">
@@ -230,7 +230,7 @@ export function FileExplorer({ containerReady }: FileExplorerProps) {
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center">
-            <p className="text-xs text-zinc-400">Select a file to view</p>
+            <p className="text-xs text-paper-600">Select a file to view</p>
           </div>
         )}
       </div>

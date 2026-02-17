@@ -44,7 +44,7 @@ export function HighlightedCode({ code, filePath }: HighlightedCodeProps) {
         <code>
           {tokenLines.map((line, i) => (
             <div key={i} className="flex">
-              <span className="inline-block w-10 shrink-0 select-none pr-3 text-right text-zinc-400 dark:text-zinc-600">
+              <span className="inline-block w-10 shrink-0 select-none pr-3 text-right text-paper-600 dark:text-paper-400">
                 {i + 1}
               </span>
               <span className="whitespace-pre-wrap break-all">
@@ -67,10 +67,10 @@ export function HighlightedCode({ code, filePath }: HighlightedCodeProps) {
       <code>
         {lines.map((line, i) => (
           <div key={i} className="flex">
-            <span className="inline-block w-10 shrink-0 select-none pr-3 text-right text-zinc-400 dark:text-zinc-600">
+            <span className="inline-block w-10 shrink-0 select-none pr-3 text-right text-paper-600 dark:text-paper-400">
               {i + 1}
             </span>
-            <span className="whitespace-pre-wrap break-all text-zinc-700 dark:text-zinc-300">
+            <span className="whitespace-pre-wrap break-all text-paper-300 dark:text-paper-700">
               {line}
             </span>
           </div>

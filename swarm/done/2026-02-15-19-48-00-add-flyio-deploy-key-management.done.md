@@ -123,7 +123,7 @@ Also check if the sidebar (`src/components/layout/Sidebar.tsx`) should include a
 
 ### 4. Verify
 
-- Run `npm -s convex codegen` to regenerate types
+- Run `npx convex dev --once` to regenerate types
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -144,7 +144,7 @@ Also check if the sidebar (`src/components/layout/Sidebar.tsx`) should include a
 6. Users can delete keys with a confirmation step
 7. The team page has a navigation link to the deploy keys page
 8. Toast notifications for success/error states
-9. `npm -s convex codegen` succeeds
+9. `npx convex dev --once` succeeds
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

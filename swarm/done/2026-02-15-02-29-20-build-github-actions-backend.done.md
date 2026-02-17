@@ -259,7 +259,7 @@ For now, using `process.env.GITHUB_TOKEN` is a reasonable starting point. In a l
 
 ### 4. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -278,7 +278,7 @@ For now, using `process.env.GITHUB_TOKEN` is a reasonable starting point. In a l
 5. `fetchRepoForWebContainer` action returns a WebContainer-compatible `FileSystemTree` object
 6. Large files (>100KB), `node_modules`, `.git`, `dist/`, `build/`, `.next/`, lock files are skipped
 7. File content fetching is batched (20 at a time) to avoid GitHub API rate limits
-8. `npm -s convex codegen` completes successfully
+8. `npx convex dev --once` completes successfully
 9. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

@@ -143,7 +143,7 @@ const handlePreviewTab = () => {
 
 ### 5. Run codegen and verify
 
-- Run `npm -s convex codegen` (in case any new convex dependencies were added)
+- Run `npx convex dev --once` (in case any new convex dependencies were added)
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

@@ -156,7 +156,7 @@ The page should:
 5. The message list auto-scrolls to show the latest message
 6. The input is disabled while no session exists (loading state)
 7. Empty state shows "Start a conversation to preview and edit your code" when no messages exist
-8. `npm -s convex codegen` completes successfully
+8. `npx convex dev --once` completes successfully
 9. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 10. No existing files or functionality are broken
 

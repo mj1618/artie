@@ -114,7 +114,7 @@ When the active session is deleted:
 
 ### 6. Run codegen and verify
 
-- Run `npm -s convex codegen` after schema change
+- Run `npx convex dev --once` after schema change
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -135,7 +135,7 @@ When the active session is deleted:
 5. Deleting the currently active session switches to the next most recent session
 6. Deleting the only remaining session leaves the user in "no session" state, ready to start a new one
 7. Session labels show: custom name > first message preview > creation date, in priority order
-8. `npm -s convex codegen` runs without errors
+8. `npx convex dev --once` runs without errors
 9. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

@@ -159,7 +159,7 @@ export const declineInvite = mutation({
 
 ### 5. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -178,7 +178,7 @@ export const declineInvite = mutation({
 5. Dashboard home page shows a banner/card for each pending invite
 6. Clicking "Accept" adds the user to the team and the team appears in their team list
 7. Clicking "Decline" removes the invite
-8. `npm -s convex codegen` completes successfully
+8. `npx convex dev --once` completes successfully
 9. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

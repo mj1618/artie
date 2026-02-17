@@ -93,7 +93,7 @@ Update the dashboard header or home page to include a link to `/settings`. Check
 
 ### 4. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -112,7 +112,7 @@ Update the dashboard header or home page to include a link to `/settings`. Check
 4. Sign-out button works from the settings page
 5. Header or dashboard has a visible link to `/settings`
 6. Page follows the existing zinc dark theme
-7. `npm -s convex codegen` completes successfully
+7. `npx convex dev --once` completes successfully
 8. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

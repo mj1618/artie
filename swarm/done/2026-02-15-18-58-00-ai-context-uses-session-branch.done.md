@@ -109,7 +109,7 @@ Use the same `branch` variable for the subsequent `getContent` calls so they're 
 
 ### 3. Run codegen and verify
 
-- Run `npm -s convex codegen` (in case session type changed)
+- Run `npx convex dev --once` (in case session type changed)
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify

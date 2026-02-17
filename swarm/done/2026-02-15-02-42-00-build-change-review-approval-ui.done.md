@@ -113,7 +113,7 @@ Add a handler that, when the user clicks "Revert Changes":
 
 ### 6. Run codegen and verify
 
-- Run `npm -s convex codegen`
+- Run `npx convex dev --once`
 - Run `npm -s tsc -p tsconfig.json --noEmit` to verify no TypeScript errors
 
 ## Files to Create/Modify
@@ -137,7 +137,7 @@ Add a handler that, when the user clicks "Revert Changes":
 6. `fileChanges` records include `originalContent` for each changed file
 7. Reverted file changes are marked with `reverted: true` in the database
 8. The revert button is hidden for already-reverted or already-committed changes
-9. `npm -s convex codegen` completes successfully
+9. `npx convex dev --once` completes successfully
 10. `npm -s tsc -p tsconfig.json --noEmit` passes with no errors
 
 ## Tech Notes

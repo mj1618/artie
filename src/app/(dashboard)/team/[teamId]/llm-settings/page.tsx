@@ -59,7 +59,7 @@ export default function LlmSettingsPage() {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="flex justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-paper-400 border-t-white" />
         </div>
       </div>
     );
@@ -70,12 +70,12 @@ export default function LlmSettingsPage() {
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href="/home"
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-paper-600 hover:text-paper-800"
         >
           &larr; Back to dashboard
         </Link>
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-8 text-center">
+          <p className="text-sm text-paper-600">
             Not authorized. Only team owners can access LLM settings.
           </p>
         </div>
@@ -140,12 +140,12 @@ export default function LlmSettingsPage() {
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href={`/team/${teamId}`}
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-paper-600 hover:text-paper-800"
         >
           &larr; Back to team
         </Link>
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-8 text-center">
+          <p className="text-sm text-paper-600">
             Only the team owner can manage LLM settings.
           </p>
         </div>
@@ -157,46 +157,46 @@ export default function LlmSettingsPage() {
     <div className="mx-auto max-w-3xl px-6 py-10">
       <Link
         href={`/team/${teamId}`}
-        className="text-sm text-zinc-400 hover:text-zinc-200"
+        className="text-sm text-paper-600 hover:text-paper-800"
       >
         &larr; Back to team
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold text-zinc-100">LLM Settings</h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <h1 className="mt-4 text-2xl font-bold text-paper-900">LLM Settings</h1>
+      <p className="mt-1 text-sm text-paper-500">
         Configure a custom LLM provider for {team.name}
       </p>
 
       {/* Current Configuration */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">
+        <h2 className="text-lg font-semibold text-paper-800">
           Current Configuration
         </h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-          <dl className="divide-y divide-zinc-800">
+        <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
+          <dl className="divide-y divide-paper-300">
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">Provider</dt>
-              <dd className="text-sm font-medium text-zinc-200">
+              <dt className="text-sm text-paper-600">Provider</dt>
+              <dd className="text-sm font-medium text-paper-800">
                 {llmSettings.llmProvider
                   ? PROVIDER_LABELS[llmSettings.llmProvider] ?? llmSettings.llmProvider
                   : "Platform Default (OpenAI Codex)"}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">Model</dt>
-              <dd className="text-sm font-medium text-zinc-200">
+              <dt className="text-sm text-paper-600">Model</dt>
+              <dd className="text-sm font-medium text-paper-800">
                 {llmSettings.llmModel ?? "gpt-5.2-codex"}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <dt className="text-sm text-zinc-400">API Key</dt>
-              <dd className="text-sm font-medium text-zinc-200">
+              <dt className="text-sm text-paper-600">API Key</dt>
+              <dd className="text-sm font-medium text-paper-800">
                 {llmSettings.hasApiKey ? (
                   <span className="rounded-full bg-emerald-900/50 px-2 py-0.5 text-xs text-emerald-300">
                     Set
                   </span>
                 ) : (
-                  <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
+                  <span className="rounded-full bg-paper-300 px-2 py-0.5 text-xs text-paper-600">
                     Using platform default
                   </span>
                 )}
@@ -208,18 +208,18 @@ export default function LlmSettingsPage() {
 
       {/* Configuration Form */}
       <form onSubmit={handleSave} className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">
+        <h2 className="text-lg font-semibold text-paper-800">
           Update Configuration
         </h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+        <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
           <div className="space-y-4 p-4">
             {/* Provider Selection */}
             <div>
-              <label className="block text-sm font-medium text-zinc-300">
+              <label className="block text-sm font-medium text-paper-700">
                 Provider
               </label>
               <div className="mt-2 flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <label className="flex items-center gap-2 text-sm text-paper-700">
                   <input
                     type="radio"
                     name="provider"
@@ -229,14 +229,14 @@ export default function LlmSettingsPage() {
                       setProvider("");
                       setModel("");
                     }}
-                    className="accent-zinc-100"
+                    className="accent-paper-700"
                   />
                   Platform Default
                 </label>
                 {(["openai", "anthropic", "google"] as const).map((p) => (
                   <label
                     key={p}
-                    className="flex items-center gap-2 text-sm text-zinc-300"
+                    className="flex items-center gap-2 text-sm text-paper-700"
                   >
                     <input
                       type="radio"
@@ -247,7 +247,7 @@ export default function LlmSettingsPage() {
                         setProvider(p);
                         setModel(MODEL_OPTIONS[p][0]?.value ?? "");
                       }}
-                      className="accent-zinc-100"
+                      className="accent-paper-700"
                     />
                     {PROVIDER_LABELS[p]}
                   </label>
@@ -260,7 +260,7 @@ export default function LlmSettingsPage() {
               <div>
                 <label
                   htmlFor="apiKey"
-                  className="block text-sm font-medium text-zinc-300"
+                  className="block text-sm font-medium text-paper-700"
                 >
                   API Key
                 </label>
@@ -274,9 +274,9 @@ export default function LlmSettingsPage() {
                       ? "Key is set — enter a new key to update"
                       : "Enter your API key"
                   }
-                  className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+                  className="mt-2 w-full rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
                 />
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-paper-500">
                   Your API key is stored securely and never exposed to the
                   browser.
                 </p>
@@ -288,7 +288,7 @@ export default function LlmSettingsPage() {
               <div>
                 <label
                   htmlFor="model"
-                  className="block text-sm font-medium text-zinc-300"
+                  className="block text-sm font-medium text-paper-700"
                 >
                   Model
                 </label>
@@ -296,7 +296,7 @@ export default function LlmSettingsPage() {
                   id="model"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
+                  className="mt-2 w-full rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500"
                 >
                   {models.map((m) => (
                     <option key={m.value} value={m.value}>
@@ -308,11 +308,11 @@ export default function LlmSettingsPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 border-t border-zinc-800 px-4 py-3">
+          <div className="flex items-center gap-3 border-t border-paper-300 px-4 py-3">
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-md bg-paper-700 px-3 py-1.5 text-sm font-medium text-paper-50 hover:bg-paper-300 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -321,7 +321,7 @@ export default function LlmSettingsPage() {
                 type="button"
                 onClick={handleReset}
                 disabled={saving}
-                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-paper-400 px-3 py-1.5 text-sm text-paper-600 hover:border-paper-500 hover:text-paper-800 disabled:opacity-50"
               >
                 Reset to Default
               </button>

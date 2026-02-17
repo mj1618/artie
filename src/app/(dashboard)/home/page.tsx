@@ -25,7 +25,7 @@ function RecentSessions() {
   if (sessions === undefined) {
     return (
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">Recent Work</h2>
+        <h2 className="text-lg font-semibold text-paper-800">Recent Work</h2>
         <div className="mt-3 space-y-2">
           <ListItemSkeleton />
           <ListItemSkeleton />
@@ -37,15 +37,15 @@ function RecentSessions() {
   if (sessions.length === 0) {
     return (
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">Recent Work</h2>
-        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-6 text-center">
+        <h2 className="text-lg font-semibold text-paper-800">Recent Work</h2>
+        <div className="mt-3 rounded-lg border border-paper-300 bg-paper-200 px-4 py-6 text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="mx-auto h-8 w-8 text-zinc-600"
+            className="mx-auto h-8 w-8 text-paper-400"
           >
             <path
               strokeLinecap="round"
@@ -53,10 +53,10 @@ function RecentSessions() {
               d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
             />
           </svg>
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm text-paper-600">
             No recent work yet
           </p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-paper-500">
             Open a repository to start chatting with AI and making changes.
           </p>
         </div>
@@ -66,20 +66,20 @@ function RecentSessions() {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold text-zinc-200">Recent Work</h2>
-      <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+      <h2 className="text-lg font-semibold text-paper-800">Recent Work</h2>
+      <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
         <ul className="divide-y divide-zinc-800">
           {sessions.map((session) => (
             <li key={session._id}>
               <Link
                 href={`/workspace/${session.repoId}?session=${session._id}`}
-                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-800/50"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-paper-300/50"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
                   fill="currentColor"
-                  className="h-4 w-4 shrink-0 text-zinc-500"
+                  className="h-4 w-4 shrink-0 text-paper-500"
                 >
                   <path
                     fillRule="evenodd"
@@ -90,13 +90,13 @@ function RecentSessions() {
                 </svg>
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-zinc-200">
+                  <p className="truncate text-sm font-medium text-paper-800">
                     {session.featureName ??
                       session.name ??
                       session.firstMessage ??
                       "Untitled session"}
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="flex items-center gap-2 text-xs text-paper-500">
                     <span className="truncate">{session.repoName}</span>
                     {session.branchName && (
                       <>
@@ -109,7 +109,7 @@ function RecentSessions() {
                   </div>
                 </div>
 
-                <span className="shrink-0 text-xs text-zinc-500">
+                <span className="shrink-0 text-xs text-paper-500">
                   {formatRelativeTime(session.lastActiveAt)}
                 </span>
               </Link>
@@ -217,16 +217,16 @@ function OnboardingChecklist({
   }
 
   return (
-    <div className="mb-6 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+    <div className="mb-6 rounded-lg border border-paper-400 bg-paper-200 p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-medium text-zinc-200">Get started with Artie</h3>
-        <span className="text-sm text-zinc-500">
+        <h3 className="font-medium text-paper-800">Get started with Artie</h3>
+        <span className="text-sm text-paper-500">
           {completedCount} of {steps.length} complete
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+      <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-paper-300">
         <div
           className="h-full bg-blue-500 transition-all duration-300"
           style={{ width: `${(completedCount / steps.length) * 100}%` }}
@@ -244,9 +244,9 @@ function OnboardingChecklist({
               key={step.id}
               className={`flex items-center justify-between rounded-md px-3 py-2 ${
                 step.done
-                  ? "bg-zinc-800/50"
+                  ? "bg-paper-300/50"
                   : isNext
-                    ? "bg-zinc-800"
+                    ? "bg-paper-300"
                     : "opacity-50"
               }`}
             >
@@ -275,7 +275,7 @@ function OnboardingChecklist({
                   >
                     <span
                       className={`text-xs font-medium ${
-                        isNext ? "text-blue-400" : "text-zinc-500"
+                        isNext ? "text-blue-400" : "text-paper-500"
                       }`}
                     >
                       {index + 1}
@@ -286,10 +286,10 @@ function OnboardingChecklist({
                 <span
                   className={`text-sm ${
                     step.done
-                      ? "text-zinc-400 line-through"
+                      ? "text-paper-600 line-through"
                       : isNext
-                        ? "text-zinc-200"
-                        : "text-zinc-500"
+                        ? "text-paper-800"
+                        : "text-paper-500"
                   }`}
                 >
                   {step.label}
@@ -302,14 +302,14 @@ function OnboardingChecklist({
                   {step.href ? (
                     <Link
                       href={step.href}
-                      className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500"
+                      className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-paper-950 hover:bg-blue-500"
                     >
                       {step.actionLabel}
                     </Link>
                   ) : step.action ? (
                     <button
                       onClick={step.action}
-                      className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500"
+                      className="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-paper-950 hover:bg-blue-500"
                     >
                       {step.actionLabel}
                     </button>
@@ -358,7 +358,7 @@ function PendingInvites() {
           className="flex items-center justify-between rounded-lg border border-blue-500/30 bg-blue-950/20 px-4 py-3"
         >
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-zinc-200">
+            <p className="text-sm text-paper-800">
               You&apos;ve been invited to join{" "}
               <span className="font-semibold">{invite.teamName}</span>
             </p>
@@ -367,14 +367,14 @@ function PendingInvites() {
             <button
               onClick={() => handleAccept(invite._id)}
               disabled={loadingId === invite._id}
-              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-paper-950 hover:bg-blue-500 disabled:opacity-50"
             >
               Accept
             </button>
             <button
               onClick={() => handleDecline(invite._id)}
               disabled={loadingId === invite._id}
-              className="rounded-md px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-200 disabled:opacity-50"
+              className="rounded-md px-3 py-1.5 text-sm text-paper-600 hover:text-paper-950 disabled:opacity-50"
             >
               Decline
             </button>
@@ -403,7 +403,7 @@ function TemplateProjects({ teamId }: { teamId: Id<"teams"> }) {
         <li key={project._id}>
           <Link
             href={`/team/${project.teamId}/templates/${project._id}`}
-            className="flex items-center px-4 py-3 transition-colors hover:bg-zinc-800/50"
+            className="flex items-center px-4 py-3 transition-colors hover:bg-paper-300/50"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -416,10 +416,10 @@ function TemplateProjects({ teamId }: { teamId: Id<"teams"> }) {
               <path d="M10.625 2.813a1.5 1.5 0 00-1.25 0L2.371 6.899a.75.75 0 000 1.294l7.004 4.086a1.5 1.5 0 001.25 0l7.004-4.086a.75.75 0 000-1.294l-7.004-4.086z" />
             </svg>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-zinc-200">
+              <p className="truncate text-sm font-medium text-paper-800">
                 {project.name}
               </p>
-              <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <div className="flex items-center gap-2 text-xs text-paper-500">
                 <span>Next.js + Convex</span>
                 <span>·</span>
                 <span
@@ -516,14 +516,14 @@ function CreateTemplateDialog({
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-900 p-6 animate-dialog-in">
-        <h2 className="text-lg font-semibold text-zinc-100">
+      <div className="w-full max-w-md rounded-lg border border-paper-400 bg-paper-200 p-6 animate-dialog-in">
+        <h2 className="text-lg font-semibold text-paper-900">
           Create from Template
         </h2>
         <form onSubmit={handleCreate} className="mt-4 space-y-4">
           {/* Project Name */}
           <div>
-            <label className="mb-1 block text-sm text-zinc-400">
+            <label className="mb-1 block text-sm text-paper-600">
               Project Name
             </label>
             <input
@@ -537,13 +537,13 @@ function CreateTemplateDialog({
               }}
               placeholder="My Cool App"
               autoFocus
-              className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+              className="w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
             />
           </div>
 
           {/* Slug */}
           <div>
-            <label className="mb-1 block text-sm text-zinc-400">Slug</label>
+            <label className="mb-1 block text-sm text-paper-600">Slug</label>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -557,7 +557,7 @@ function CreateTemplateDialog({
                   );
                 }}
                 placeholder="my-cool-app"
-                className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+                className="w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
               />
               {projectSlug.length > 0 && slugAvailable !== undefined && (
                 <span className="shrink-0 text-sm">
@@ -573,25 +573,25 @@ function CreateTemplateDialog({
 
           {/* Template (read-only) */}
           <div>
-            <label className="mb-1 block text-sm text-zinc-400">
+            <label className="mb-1 block text-sm text-paper-600">
               Template
             </label>
-            <div className="rounded-md border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-300">
+            <div className="rounded-md border border-paper-400 bg-paper-300/50 px-3 py-2 text-sm text-paper-700">
               Next.js + Convex
             </div>
           </div>
 
           {/* Deploy Key Selector */}
           <div>
-            <label className="mb-1 block text-sm text-zinc-400">
+            <label className="mb-1 block text-sm text-paper-600">
               Fly.io Deploy Key
             </label>
             {deployKeys === undefined ? (
-              <div className="rounded-md border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-500">
+              <div className="rounded-md border border-paper-400 bg-paper-300/50 px-3 py-2 text-sm text-paper-500">
                 Loading...
               </div>
             ) : deployKeys.length === 0 ? (
-              <div className="rounded-md border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-500">
+              <div className="rounded-md border border-paper-400 bg-paper-300/50 px-3 py-2 text-sm text-paper-500">
                 No deploy keys.{" "}
                 <Link
                   href={`/team/${teamId}/deploy-keys`}
@@ -610,7 +610,7 @@ function CreateTemplateDialog({
                       : null,
                   )
                 }
-                className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
+                className="w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500"
               >
                 <option value="">Select a deploy key...</option>
                 {deployKeys.map((key) => (
@@ -627,7 +627,7 @@ function CreateTemplateDialog({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md px-3 py-2 text-sm text-zinc-400 hover:text-zinc-200"
+              className="rounded-md px-3 py-2 text-sm text-paper-600 hover:text-paper-950"
             >
               Cancel
             </button>
@@ -640,7 +640,7 @@ function CreateTemplateDialog({
                 !selectedDeployKeyId ||
                 slugAvailable === false
               }
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-paper-950 hover:bg-blue-500 disabled:opacity-50"
             >
               {creatingProject ? "Creating..." : "Create Project"}
             </button>
@@ -665,7 +665,7 @@ function TeamRepos({ teamId }: { teamId: Id<"teams"> }) {
 
   if (repos.length === 0) {
     return (
-      <div className="px-4 py-3 text-sm text-zinc-500">
+      <div className="px-4 py-3 text-sm text-paper-500">
         No repos connected yet
       </div>
     );
@@ -674,7 +674,7 @@ function TeamRepos({ teamId }: { teamId: Id<"teams"> }) {
   return (
     <ul className="divide-y divide-zinc-800">
       {repos.map((repo) => (
-        <li key={repo._id} className="flex items-center transition-colors hover:bg-zinc-800/50">
+        <li key={repo._id} className="flex items-center transition-colors hover:bg-paper-300/50">
           <Link
             href={`/workspace/${repo._id}`}
             className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3"
@@ -683,7 +683,7 @@ function TeamRepos({ teamId }: { teamId: Id<"teams"> }) {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className="h-4 w-4 shrink-0 text-zinc-500"
+              className="h-4 w-4 shrink-0 text-paper-500"
             >
               <path
                 fillRule="evenodd"
@@ -692,16 +692,16 @@ function TeamRepos({ teamId }: { teamId: Id<"teams"> }) {
               />
             </svg>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-zinc-200">
+              <p className="truncate text-sm font-medium text-paper-800">
                 {repo.githubOwner}/{repo.githubRepo}
               </p>
-              <p className="truncate text-xs text-zinc-500">{repo.defaultBranch}</p>
+              <p className="truncate text-xs text-paper-500">{repo.defaultBranch}</p>
             </div>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className="h-4 w-4 text-zinc-600"
+              className="h-4 w-4 text-paper-400"
             >
               <path
                 fillRule="evenodd"
@@ -712,7 +712,7 @@ function TeamRepos({ teamId }: { teamId: Id<"teams"> }) {
           </Link>
           <Link
             href={`/repos/${repo._id}/settings`}
-            className="mr-3 rounded p-1.5 text-zinc-600 hover:bg-zinc-700 hover:text-zinc-300"
+            className="mr-3 rounded p-1.5 text-paper-400 hover:bg-paper-400 hover:text-paper-700"
             title="Repository settings"
           >
             <svg
@@ -773,10 +773,10 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="text-2xl font-bold text-zinc-100">
+      <h1 className="text-2xl font-bold text-paper-900">
         Welcome back, {displayName}
       </h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-sm text-paper-500">
         Select a repo to open the workspace, or create a new team.
       </p>
 
@@ -801,10 +801,10 @@ export default function DashboardPage() {
       <RecentSessions />
 
       <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-200">Your Teams</h2>
+        <h2 className="text-lg font-semibold text-paper-800">Your Teams</h2>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="rounded-md bg-paper-700 px-3 py-1.5 text-sm font-medium text-paper-5000 hover:bg-zinc-200"
         >
           Create Team
         </button>
@@ -821,12 +821,12 @@ export default function DashboardPage() {
             onChange={(e) => setTeamName(e.target.value)}
             placeholder="Team name"
             autoFocus
-            className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+            className="flex-1 rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
           />
           <button
             type="submit"
             disabled={creating || !teamName.trim()}
-            className="rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            className="rounded-md bg-paper-700 px-3 py-2 text-sm font-medium text-paper-5000 hover:bg-zinc-200 disabled:opacity-50"
           >
             {creating ? "Creating..." : "Create"}
           </button>
@@ -836,7 +836,7 @@ export default function DashboardPage() {
               setShowCreate(false);
               setTeamName("");
             }}
-            className="rounded-md px-3 py-2 text-sm text-zinc-400 hover:text-zinc-200"
+            className="rounded-md px-3 py-2 text-sm text-paper-600 hover:text-paper-950"
           >
             Cancel
           </button>
@@ -850,13 +850,13 @@ export default function DashboardPage() {
           <CardSkeleton lines={2} />
         </div>
       ) : teams.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-8 text-center">
+          <p className="text-sm text-paper-600">
             You don&apos;t have any teams yet.
           </p>
           <button
             onClick={() => setShowCreate(true)}
-            className="mt-3 rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+            className="mt-3 rounded-md bg-paper-700 px-4 py-2 text-sm font-medium text-paper-5000 hover:bg-zinc-200"
           >
             Create your first team
           </button>
@@ -866,22 +866,22 @@ export default function DashboardPage() {
           {teams.map((team) => (
             <div
               key={team._id}
-              className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
+              className="overflow-hidden rounded-lg border border-paper-300 bg-paper-200"
             >
-              <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-                <h3 className="text-sm font-semibold text-zinc-200">
+              <div className="flex items-center justify-between border-b border-paper-300 px-4 py-3">
+                <h3 className="text-sm font-semibold text-paper-800">
                   {team.name}
                 </h3>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setTemplateTeamId(team._id)}
-                    className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                    className="rounded px-2 py-1 text-xs text-paper-600 hover:bg-paper-300 hover:text-paper-950"
                   >
                     + Template
                   </button>
                   <Link
                     href={`/team/${team._id}`}
-                    className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                    className="rounded px-2 py-1 text-xs text-paper-600 hover:bg-paper-300 hover:text-paper-950"
                   >
                     Manage
                   </Link>

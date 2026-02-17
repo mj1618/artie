@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Id } from "../../../convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { Id, Doc } from "../../../convex/_generated/dataModel";
+import { api } from "../../../convex/_generated/api";
 import {
   useWorkspaceContainer,
   type ContainerPhase,
@@ -11,8 +13,9 @@ import { PreviewNavBar } from "./PreviewNavBar";
 import { useToast } from "@/lib/useToast";
 import { SandpackPreview } from "./SandpackPreview";
 import { FlyioSpritePreview } from "./FlyioSpritePreview";
+import { DropletPreview } from "./DropletPreview";
 
-type RuntimeType = "webcontainer" | "flyio-sprite" | "sandpack";
+type RuntimeType = "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet";
 
 interface PreviewPanelProps {
   repoId: Id<"repos">;
@@ -82,13 +85,13 @@ function BootProgressStepper({ phase }: { phase: ContainerPhase }) {
                 <div className="h-2 w-2 rounded-full bg-blue-400" />
               </div>
             ) : (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-700">
-                <div className="h-2 w-2 rounded-full bg-zinc-700" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-paper-400">
+                <div className="h-2 w-2 rounded-full bg-paper-400" />
               </div>
             )}
 
             <span className={`text-sm ${
-              isComplete ? "text-emerald-400" : isCurrent ? "text-zinc-100" : "text-zinc-600"
+              isComplete ? "text-emerald-400" : isCurrent ? "text-paper-900" : "text-paper-400"
             }`}>
               {step.label}
               {isCurrent && "..."}
@@ -164,20 +167,74 @@ function getFriendlyError(rawError: string): FriendlyError {
   };
 }
 
-function TerminalOutput({ output }: { output: string[] }) {
+function TerminalOutput({
+  output,
+  bashCommands,
+}: {
+  output: string[];
+  bashCommands?: Doc<"bashCommands">[];
+}) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [output.length]);
+  }, [output.length, bashCommands?.length]);
 
   return (
-    <div className="flex-1 overflow-auto bg-zinc-950 p-3 font-mono text-xs leading-relaxed text-zinc-300">
+    <div className="flex-1 overflow-auto bg-paper-100 p-3 font-mono text-xs leading-relaxed text-paper-700">
+      {/* Boot/dev server output */}
       {output.map((line, i) => (
-        <div key={i} className="whitespace-pre-wrap break-all">
+        <div key={`boot-${i}`} className="whitespace-pre-wrap break-all">
           {line}
         </div>
       ))}
+
+      {/* Bash command output */}
+      {bashCommands && bashCommands.length > 0 && (
+        <>
+          {output.length > 0 && (
+            <div className="my-3 border-t border-paper-300" />
+          )}
+          {bashCommands.map((cmd) => (
+            <div key={cmd._id} className="mb-3">
+              <div className="flex items-center gap-2 text-paper-500">
+                <span className="text-emerald-600">$</span>
+                <span className="text-paper-800">{cmd.command}</span>
+                {cmd.status === "running" && (
+                  <span className="animate-pulse text-yellow-600">
+                    (running...)
+                  </span>
+                )}
+                {cmd.status === "pending" && (
+                  <span className="text-paper-400">(pending)</span>
+                )}
+              </div>
+              {cmd.output && (
+                <div className="mt-1 whitespace-pre-wrap break-all pl-4 text-paper-600">
+                  {cmd.output}
+                </div>
+              )}
+              {cmd.error && (
+                <div className="mt-1 pl-4 text-red-500">{cmd.error}</div>
+              )}
+              {cmd.status === "completed" && cmd.exitCode !== undefined && (
+                <div
+                  className={`mt-1 pl-4 text-xs ${
+                    cmd.exitCode === 0 ? "text-emerald-600" : "text-red-500"
+                  }`}
+                >
+                  exit code: {cmd.exitCode}
+                </div>
+              )}
+              {cmd.status === "failed" && (
+                <div className="mt-1 pl-4 text-xs text-red-500">
+                  exit code: {cmd.exitCode ?? "N/A"}
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
       <div ref={bottomRef} />
     </div>
   );
@@ -194,6 +251,11 @@ export function PreviewPanel({ repoId, sessionId, branch, runtime = "webcontaine
     return <FlyioSpritePreview repoId={repoId} sessionId={sessionId} branch={branch} />;
   }
 
+  // If DigitalOcean Droplet runtime, render DropletPreview component
+  if (runtime === "digitalocean-droplet") {
+    return <DropletPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
+  }
+
   // WebContainer runtime (default)
   return <WebContainerPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
 }
@@ -204,6 +266,12 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
   const { phase, previewUrl, error, output, retry, refreshFiles, refreshing } =
     useWorkspaceContainer(repoId, sessionId, { branch });
   const { toast } = useToast();
+
+  // Query bash commands for this session
+  const bashCommands = useQuery(
+    api.bashCommands.listBySession,
+    sessionId ? { sessionId } : "skip",
+  );
 
   const handleRefreshFromGitHub = async () => {
     const result = await refreshFiles();
@@ -244,14 +312,14 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
   const tabClass = (active: boolean) =>
     `rounded px-2.5 py-1 text-xs font-medium transition-colors ${
       active
-        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-        : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+        ? "bg-paper-200 text-paper-950 dark:bg-paper-700 dark:text-paper-200"
+        : "text-paper-500 hover:text-paper-400 dark:text-paper-600 dark:hover:text-paper-800"
     }`;
 
   return (
-    <div className="flex h-full flex-col bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex h-full flex-col bg-paper-700 dark:bg-paper-100">
       {/* Toggle bar */}
-      <div className="flex items-center gap-1 border-b border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
+      <div className="flex items-center gap-1 border-b border-paper-600 px-3 py-1.5 dark:border-paper-300">
         <button
           onClick={() => setView("preview")}
           className={tabClass(view === "preview")}
@@ -274,7 +342,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
 
       {/* Content area */}
       {view === "terminal" ? (
-        <TerminalOutput output={output} />
+        <TerminalOutput output={output} bashCommands={bashCommands} />
       ) : view === "code" ? (
         <FileExplorer containerReady={phase !== "idle" && phase !== "booting"} />
       ) : isRunning && previewUrl && currentUrl ? (
@@ -315,11 +383,11 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
             const friendly = getFriendlyError(error ?? "");
             return (
               <>
-                <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">{friendly.title}</h3>
-                <p className="max-w-sm text-center text-sm text-zinc-600 dark:text-zinc-400">
+                <h3 className="text-base font-semibold text-paper-200 dark:text-paper-800">{friendly.title}</h3>
+                <p className="max-w-sm text-center text-sm text-paper-400 dark:text-paper-600">
                   {friendly.description}
                 </p>
-                <p className="max-w-sm text-center text-xs text-zinc-500 dark:text-zinc-500">
+                <p className="max-w-sm text-center text-xs text-paper-500 dark:text-paper-500">
                   {friendly.suggestion}
                 </p>
               </>
@@ -327,7 +395,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
           })()}
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-400 underline"
+            className="text-xs text-paper-500 hover:text-paper-400 dark:text-paper-400 dark:hover:text-paper-600 underline"
           >
             {showDetails ? "Hide technical details" : "Show technical details"}
           </button>
@@ -337,7 +405,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
             </p>
           )}
           {showDetails && output.length > 0 && (
-            <div className="w-full max-w-lg rounded bg-zinc-100 p-3 font-mono text-xs text-zinc-600 dark:bg-zinc-950 dark:text-zinc-400 max-h-40 overflow-auto">
+            <div className="w-full max-w-lg rounded bg-paper-700 p-3 font-mono text-xs text-paper-400 dark:bg-paper-100 dark:text-paper-600 max-h-40 overflow-auto">
               {output.slice(-10).map((line, i) => (
                 <div key={i} className="whitespace-pre-wrap break-all">
                   {line}
@@ -347,7 +415,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
           )}
           <button
             onClick={retry}
-            className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded bg-paper-200 px-4 py-2 text-sm font-medium text-paper-950 hover:bg-paper-300 dark:bg-paper-700 dark:text-paper-200 dark:hover:bg-paper-600"
           >
             Retry
           </button>
@@ -356,7 +424,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
           <BootProgressStepper phase={phase} />
           {output.length > 0 && (
-            <div className="mt-2 w-full max-w-lg rounded bg-zinc-950 p-3 font-mono text-xs text-zinc-400 max-h-32 overflow-auto">
+            <div className="mt-2 w-full max-w-lg rounded bg-paper-100 p-3 font-mono text-xs text-paper-600 max-h-32 overflow-auto">
               {output.slice(-5).map((line, i) => (
                 <div key={i} className="whitespace-pre-wrap break-all">
                   {line}
@@ -368,12 +436,12 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
       ) : (
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-paper-600 dark:bg-paper-300">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"
-                className="h-6 w-6 text-zinc-400"
+                className="h-6 w-6 text-paper-600"
               >
                 <path
                   fillRule="evenodd"
@@ -382,7 +450,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
                 />
               </svg>
             </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-paper-500 dark:text-paper-600">
               Send a message to see a live preview
             </p>
           </div>
@@ -390,7 +458,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
       )}
 
       {/* Status bar */}
-      <div className="border-t border-zinc-200 px-4 py-2 dark:border-zinc-800">
+      <div className="border-t border-paper-600 px-4 py-2 dark:border-paper-300">
         <p
           className={`text-xs ${
             isRunning
@@ -399,7 +467,7 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
                 ? "text-red-500 dark:text-red-400"
                 : isLoading
                   ? "text-yellow-600 dark:text-yellow-400"
-                  : "text-zinc-400 dark:text-zinc-500"
+                  : "text-paper-600 dark:text-paper-500"
           }`}
         >
           {isRunning && previewUrl

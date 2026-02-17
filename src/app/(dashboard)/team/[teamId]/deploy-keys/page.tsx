@@ -31,7 +31,7 @@ export default function DeployKeysPage() {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="flex justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-paper-400 border-t-paper-950" />
         </div>
       </div>
     );
@@ -42,12 +42,12 @@ export default function DeployKeysPage() {
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href="/home"
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-paper-600 hover:text-paper-800"
         >
           &larr; Back to dashboard
         </Link>
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-8 text-center">
+          <p className="text-sm text-paper-600">
             Not authorized. Only team owners can manage deploy keys.
           </p>
         </div>
@@ -62,12 +62,12 @@ export default function DeployKeysPage() {
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link
           href={`/team/${teamId}`}
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-paper-600 hover:text-paper-800"
         >
           &larr; Back to team
         </Link>
-        <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="mt-6 rounded-lg border border-paper-300 bg-paper-200 p-8 text-center">
+          <p className="text-sm text-paper-600">
             Only team owners can manage deploy keys.
           </p>
         </div>
@@ -117,39 +117,39 @@ export default function DeployKeysPage() {
     <div className="mx-auto max-w-3xl px-6 py-10">
       <Link
         href={`/team/${teamId}`}
-        className="text-sm text-zinc-400 hover:text-zinc-200"
+        className="text-sm text-paper-600 hover:text-paper-800"
       >
         &larr; Back to team
       </Link>
 
-      <h1 className="mt-4 text-2xl font-bold text-zinc-100">
+      <h1 className="mt-4 text-2xl font-bold text-paper-900">
         Fly.io Deploy Keys
       </h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-sm text-paper-500">
         Manage deploy keys for server-side runtime environments.
       </p>
 
       {/* Existing Keys */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">Deploy Keys</h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+        <h2 className="text-lg font-semibold text-paper-800">Deploy Keys</h2>
+        <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
           {keys.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-zinc-500">
+            <div className="px-4 py-6 text-center text-sm text-paper-500">
               No deploy keys added yet. Add a Fly.io deploy key to enable
               server-side runtime for your projects.
             </div>
           ) : (
-            <ul className="divide-y divide-zinc-800">
+            <ul className="divide-y divide-paper-300">
               {keys.map((k) => (
                 <li
                   key={k._id}
                   className="flex items-center justify-between px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-200">
+                    <p className="text-sm font-medium text-paper-800">
                       {k.name}
                     </p>
-                    <div className="mt-0.5 flex items-center gap-3 text-xs text-zinc-500">
+                    <div className="mt-0.5 flex items-center gap-3 text-xs text-paper-500">
                       <span>
                         Added{" "}
                         {new Date(k.createdAt).toLocaleDateString()}
@@ -180,13 +180,13 @@ export default function DeployKeysPage() {
 
       {/* Add Key Form */}
       <form onSubmit={handleAdd} className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-200">Add Deploy Key</h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+        <h2 className="text-lg font-semibold text-paper-800">Add Deploy Key</h2>
+        <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
           <div className="space-y-4 p-4">
             <div>
               <label
                 htmlFor="keyName"
-                className="block text-sm font-medium text-zinc-300"
+                className="block text-sm font-medium text-paper-700"
               >
                 Key Name
               </label>
@@ -196,13 +196,13 @@ export default function DeployKeysPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Production deploy key"
-                className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+                className="mt-2 w-full rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
               />
             </div>
             <div>
               <label
                 htmlFor="deployKey"
-                className="block text-sm font-medium text-zinc-300"
+                className="block text-sm font-medium text-paper-700"
               >
                 Deploy Key
               </label>
@@ -212,19 +212,19 @@ export default function DeployKeysPage() {
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
                 placeholder="Enter your Fly.io deploy token"
-                className="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-500"
+                className="mt-2 w-full rounded-md border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500"
               />
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-paper-500">
                 Your deploy key is stored securely and never exposed to the
                 browser.
               </p>
             </div>
           </div>
-          <div className="border-t border-zinc-800 px-4 py-3">
+          <div className="border-t border-paper-300 px-4 py-3">
             <button
               type="submit"
               disabled={adding || !name.trim() || !key.trim()}
-              className="rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-md bg-paper-700 px-3 py-1.5 text-sm font-medium text-paper-50 hover:bg-paper-300 disabled:opacity-50"
             >
               {adding ? "Adding..." : "Add Key"}
             </button>

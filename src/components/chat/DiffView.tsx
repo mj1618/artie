@@ -13,7 +13,7 @@ export function DiffView({ oldContent, newContent, filePath }: DiffViewProps) {
 
   if (patch.hunks.length === 0) {
     return (
-      <div className="px-3 py-4 text-center text-xs text-zinc-500">
+      <div className="px-3 py-4 text-center text-xs text-paper-500">
         No changes
       </div>
     );
@@ -25,7 +25,7 @@ export function DiffView({ oldContent, newContent, filePath }: DiffViewProps) {
         let newLineNum = hunk.newStart;
         return (
         <div key={hunkIndex}>
-          <div className="bg-zinc-200/50 px-2 py-0.5 font-mono text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-400">
+          <div className="bg-paper-800/50 px-2 py-0.5 font-mono text-paper-500 dark:bg-paper-400/50 dark:text-paper-600">
             @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},
             {hunk.newLines} @@
           </div>
@@ -62,9 +62,9 @@ export function DiffView({ oldContent, newContent, filePath }: DiffViewProps) {
             return (
               <div
                 key={`${hunkIndex}-${lineIndex}`}
-                className="text-zinc-700 dark:text-zinc-300"
+                className="text-zinc-700 dark:text-paper-700"
               >
-                <span className="inline-block w-8 select-none pr-2 text-right text-zinc-500/60">
+                <span className="inline-block w-8 select-none pr-2 text-right text-paper-500/60">
                   {currentLineNum}
                 </span>
                 {line}

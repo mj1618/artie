@@ -129,7 +129,7 @@ export function SessionPicker({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 border-b border-zinc-200 px-3 py-2 text-left text-xs text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        className="flex w-full items-center gap-2 border-b border-paper-800 px-3 py-2 text-left text-xs text-paper-500 transition-colors hover:bg-paper-950 dark:border-paper-400 dark:text-paper-600 dark:hover:bg-paper-300"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -159,13 +159,13 @@ export function SessionPicker({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 max-h-64 overflow-y-auto border-b border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="absolute left-0 right-0 top-full z-50 max-h-64 overflow-y-auto border-b border-paper-800 bg-white shadow-lg dark:border-paper-400 dark:bg-paper-200">
           <button
             onClick={() => {
               onNewChat();
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-100 dark:text-white dark:hover:bg-zinc-800"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-paper-50 transition-colors hover:bg-paper-700 dark:text-paper-950 dark:hover:bg-paper-300"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -179,13 +179,13 @@ export function SessionPicker({
           </button>
 
           {sessions.length > 0 && (
-            <div className="border-t border-zinc-100 dark:border-zinc-800">
+            <div className="border-t border-paper-900 dark:border-paper-300">
               {sessions.map((session) => (
                 <div
                   key={session._id}
-                  className={`group flex w-full items-center gap-1 px-3 py-2 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                  className={`group flex w-full items-center gap-1 px-3 py-2 transition-colors hover:bg-paper-700 dark:hover:bg-paper-300 ${
                     session._id === activeSessionId
-                      ? "bg-zinc-100 dark:bg-zinc-800"
+                      ? "bg-paper-700 dark:bg-paper-300"
                       : ""
                   }`}
                 >
@@ -200,7 +200,7 @@ export function SessionPicker({
                         if (e.key === "Escape") handleCancelRename();
                       }}
                       onBlur={handleSaveRename}
-                      className="flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-700 outline-none focus:border-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                      className="flex-1 rounded border border-paper-700 bg-white px-1.5 py-0.5 text-xs text-zinc-700 outline-none focus:border-paper-500 dark:border-paper-400 dark:bg-paper-300 dark:text-paper-700"
                       placeholder="Session name..."
                     />
                   ) : (
@@ -216,10 +216,10 @@ export function SessionPicker({
                       className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="truncate text-xs font-medium text-zinc-700 dark:text-paper-700">
                           {session.featureName ?? getSessionLabel(session)}
                         </span>
-                        <span className="ml-2 shrink-0 text-[10px] text-zinc-400">
+                        <span className="ml-2 shrink-0 text-[10px] text-paper-600">
                           {formatRelativeTime(session.lastActiveAt)}
                         </span>
                       </div>
@@ -229,7 +229,7 @@ export function SessionPicker({
                         </span>
                       )}
                       {session.firstMessage && session.name && (
-                        <span className="truncate text-[11px] text-zinc-400 dark:text-zinc-500">
+                        <span className="truncate text-[11px] text-paper-600 dark:text-paper-500">
                           {session.firstMessage.length > 50
                             ? session.firstMessage.slice(0, 50) + "..."
                             : session.firstMessage}
@@ -243,7 +243,7 @@ export function SessionPicker({
                       e.stopPropagation();
                       setDeleteSessionId(session._id);
                     }}
-                    className="ml-1 shrink-0 rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-zinc-500 dark:hover:text-red-400"
+                    className="ml-1 shrink-0 rounded p-0.5 text-paper-600 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-paper-500 dark:hover:text-red-400"
                     title="Delete session"
                   >
                     <svg
