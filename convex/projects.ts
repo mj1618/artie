@@ -39,7 +39,7 @@ export const addRepo = mutation({
     githubRepo: v.string(),
     defaultBranch: v.optional(v.string()),
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"))),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"), v.literal("docker"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -99,10 +99,15 @@ export const updateRepo = mutation({
     repoId: v.id("repos"),
     pushStrategy: v.optional(v.union(v.literal("direct"), v.literal("pr"))),
     defaultBranch: v.optional(v.string()),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"))),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"), v.literal("docker"))),
     externalConvexUrl: v.optional(v.string()),
     externalConvexDeployment: v.optional(v.string()),
     clearExternalConvex: v.optional(v.boolean()),
+    envVars: v.optional(v.array(v.object({
+      key: v.string(),
+      value: v.string(),
+    }))),
+    customPrompt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -114,9 +119,11 @@ export const updateRepo = mutation({
     const updates: Partial<{
       pushStrategy: "direct" | "pr";
       defaultBranch: string;
-      runtime: "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet";
+      runtime: "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet" | "firecracker" | "docker";
       externalConvexUrl: string;
       externalConvexDeployment: string;
+      envVars: Array<{ key: string; value: string }>;
+      customPrompt: string;
     }> = {};
     if (args.pushStrategy !== undefined) updates.pushStrategy = args.pushStrategy;
     if (args.defaultBranch !== undefined) updates.defaultBranch = args.defaultBranch;
@@ -130,6 +137,8 @@ export const updateRepo = mutation({
     }
     if (args.externalConvexUrl !== undefined) updates.externalConvexUrl = args.externalConvexUrl;
     if (args.externalConvexDeployment !== undefined) updates.externalConvexDeployment = args.externalConvexDeployment;
+    if (args.envVars !== undefined) updates.envVars = args.envVars;
+    if (args.customPrompt !== undefined) updates.customPrompt = args.customPrompt;
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch("repos", args.repoId, updates);
     }
@@ -170,5 +179,33 @@ export const hasAnyRepos = query({
       if (repo) return true;
     }
     return false;
+  },
+});
+
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    // Get all teams the user is on
+    const memberships = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    // Get all repos from all teams in parallel
+    const reposArrays = await Promise.all(
+      memberships.map(async (m) => {
+        const team = await ctx.db.get("teams", m.teamId);
+        const repos = await ctx.db
+          .query("repos")
+          .withIndex("by_teamId", (q) => q.eq("teamId", m.teamId))
+          .collect();
+        return repos.map((repo) => ({
+          ...repo,
+          teamName: team?.name ?? "Unknown",
+        }));
+      }),
+    );
+    return reposArrays.flat();
   },
 });

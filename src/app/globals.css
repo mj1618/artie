@@ -1,22 +1,68 @@
 @import "tailwindcss";
 
 :root {
-  /* Paper theme - warm cream/parchment colors */
-  --background: #faf7f2;
-  --foreground: #3d362c;
+  /* Paper theme - warm cream/parchment colors with subtle warmth */
+  --background: #f8f4ed;
+  --foreground: #352f27;
   
-  /* Paper theme palette */
-  --paper-50: #fdfcfa;
-  --paper-100: #faf7f2;
-  --paper-200: #f5f0e8;
-  --paper-300: #e8e0d4;
-  --paper-400: #d4c9b8;
-  --paper-500: #b5a894;
-  --paper-600: #8a7d6a;
-  --paper-700: #6b5f4e;
-  --paper-800: #4d4538;
-  --paper-900: #3d362c;
-  --paper-950: #2d2820;
+  /* Refined paper palette - warmer, richer tones */
+  --paper-50: #fcfbf8;
+  --paper-100: #f8f4ed;
+  --paper-200: #f0ebe0;
+  --paper-300: #e4dccf;
+  --paper-400: #cfc3b0;
+  --paper-500: #a99c87;
+  --paper-600: #7d7262;
+  --paper-700: #5c5345;
+  --paper-800: #433d33;
+  --paper-900: #352f27;
+  --paper-950: #251f19;
+  
+  /* Accent colors that complement paper */
+  --ink: #2c2416;
+  --ink-light: #4a4035;
+  --sepia: #8b6914;
+  --sepia-light: #c4a035;
+  --terracotta: #b5543e;
+  --terracotta-light: #d4826c;
+  --sage: #5a7a5a;
+  --sage-light: #7da17d;
+  --sky: #4a7c9b;
+  --sky-light: #6ba3c2;
+  
+  /* Extended palette - richer accent colors */
+  --burgundy: #8b3a4c;
+  --burgundy-light: #b5637a;
+  --plum: #7a5078;
+  --plum-light: #a67ba3;
+  --coral: #d4826c;
+  --coral-light: #e8a896;
+  --teal: #3d7a7a;
+  --teal-light: #5fa5a5;
+  --ochre: #b8860b;
+  --ochre-light: #daa520;
+  --slate: #5a6a7a;
+  --slate-light: #8299b0;
+  --rose: #c4616c;
+  --rose-light: #e08e96;
+  --olive: #6b7b3a;
+  --olive-light: #8fa95c;
+  
+  /* Primary action color - teal for buttons */
+  --primary: #3d7a7a;
+  --primary-hover: #326666;
+  --primary-light: #5fa5a5;
+  --primary-lighter: #e6f2f2;
+  
+  /* Semantic colors */
+  --success: #5a7a5a;
+  --success-light: #e8f0e8;
+  --error: #b5543e;
+  --error-light: #f8ebe8;
+  --warning: #c4a035;
+  --warning-light: #f8f4e0;
+  --info: #4a7c9b;
+  --info-light: #e8f0f4;
 }
 
 @theme inline {
@@ -25,7 +71,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
-  /* Paper theme colors for Tailwind */
+  /* Paper palette */
   --color-paper-50: var(--paper-50);
   --color-paper-100: var(--paper-100);
   --color-paper-200: var(--paper-200);
@@ -37,6 +83,58 @@
   --color-paper-800: var(--paper-800);
   --color-paper-900: var(--paper-900);
   --color-paper-950: var(--paper-950);
+  
+  /* Accent colors */
+  --color-ink: var(--ink);
+  --color-ink-light: var(--ink-light);
+  --color-sepia: var(--sepia);
+  --color-sepia-light: var(--sepia-light);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-light: var(--terracotta-light);
+  --color-sage: var(--sage);
+  --color-sage-light: var(--sage-light);
+  --color-sky: var(--sky);
+  --color-sky-light: var(--sky-light);
+  
+  /* Extended accent palette */
+  --color-burgundy: var(--burgundy);
+  --color-burgundy-light: var(--burgundy-light);
+  --color-plum: var(--plum);
+  --color-plum-light: var(--plum-light);
+  --color-coral: var(--coral);
+  --color-coral-light: var(--coral-light);
+  --color-teal: var(--teal);
+  --color-teal-light: var(--teal-light);
+  --color-ochre: var(--ochre);
+  --color-ochre-light: var(--ochre-light);
+  --color-slate: var(--slate);
+  --color-slate-light: var(--slate-light);
+  --color-rose: var(--rose);
+  --color-rose-light: var(--rose-light);
+  --color-olive: var(--olive);
+  --color-olive-light: var(--olive-light);
+  
+  /* Primary */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-primary-lighter: var(--primary-lighter);
+  
+  /* Semantic */
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-error: var(--error);
+  --color-error-light: var(--error-light);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-info: var(--info);
+  --color-info-light: var(--info-light);
+  
+  /* Shadows for depth */
+  --shadow-paper-sm: 0 1px 2px rgba(45, 40, 32, 0.05);
+  --shadow-paper: 0 1px 3px rgba(45, 40, 32, 0.08), 0 1px 2px rgba(45, 40, 32, 0.06);
+  --shadow-paper-md: 0 4px 6px rgba(45, 40, 32, 0.07), 0 2px 4px rgba(45, 40, 32, 0.05);
+  --shadow-paper-lg: 0 10px 15px rgba(45, 40, 32, 0.08), 0 4px 6px rgba(45, 40, 32, 0.05);
 }
 
 html,
@@ -46,7 +144,153 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Subtle paper texture overlay for depth */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.015;
+  z-index: 9999;
+}
+
+/* Paper shadow utilities */
+.shadow-paper-sm {
+  box-shadow: var(--shadow-paper-sm);
+}
+
+.shadow-paper {
+  box-shadow: var(--shadow-paper);
+}
+
+.shadow-paper-md {
+  box-shadow: var(--shadow-paper-md);
+}
+
+.shadow-paper-lg {
+  box-shadow: var(--shadow-paper-lg);
+}
+
+/* Elegant card styling */
+.paper-card {
+  background: var(--paper-50);
+  border: 1px solid var(--paper-300);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-paper);
+}
+
+.paper-card-elevated {
+  background: var(--paper-50);
+  border: 1px solid var(--paper-200);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-paper-md);
+}
+
+/* Inset/recessed styling for inputs and secondary areas */
+.paper-inset {
+  background: var(--paper-200);
+  border: 1px solid var(--paper-300);
+  box-shadow: inset 0 1px 2px rgba(45, 40, 32, 0.04);
+}
+
+/* Interactive states */
+.paper-interactive {
+  transition: all 150ms ease;
+}
+
+.paper-interactive:hover {
+  background: var(--paper-200);
+  box-shadow: var(--shadow-paper-sm);
+}
+
+/* Focus ring that matches paper theme */
+.paper-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--paper-100), 0 0 0 4px var(--primary-light);
+}
+
+/* Divider styling */
+.paper-divider {
+  border-color: var(--paper-300);
+  background: linear-gradient(90deg, transparent, var(--paper-400), transparent);
+  height: 1px;
+  border: none;
+}
+
+/* Subtle accent gradients for visual interest */
+.gradient-sepia {
+  background: linear-gradient(135deg, var(--sepia) 0%, var(--sepia-light) 100%);
+}
+
+.gradient-sage {
+  background: linear-gradient(135deg, var(--sage) 0%, var(--sage-light) 100%);
+}
+
+.gradient-sky {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-light) 100%);
+}
+
+.gradient-terracotta {
+  background: linear-gradient(135deg, var(--terracotta) 0%, var(--terracotta-light) 100%);
+}
+
+.gradient-burgundy {
+  background: linear-gradient(135deg, var(--burgundy) 0%, var(--burgundy-light) 100%);
+}
+
+.gradient-plum {
+  background: linear-gradient(135deg, var(--plum) 0%, var(--plum-light) 100%);
+}
+
+.gradient-teal {
+  background: linear-gradient(135deg, var(--teal) 0%, var(--teal-light) 100%);
+}
+
+.gradient-ochre {
+  background: linear-gradient(135deg, var(--ochre) 0%, var(--ochre-light) 100%);
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+}
+
+/* Warm paper gradient backgrounds */
+.gradient-paper-warm {
+  background: linear-gradient(180deg, var(--paper-50) 0%, var(--paper-200) 100%);
+}
+
+.gradient-paper-sunset {
+  background: linear-gradient(135deg, var(--paper-100) 0%, #f5e6d3 50%, #ecdcc8 100%);
+}
+
+/* Accent dot/badge utilities */
+.dot-primary { background-color: var(--primary); }
+.dot-sepia { background-color: var(--sepia); }
+.dot-sage { background-color: var(--sage); }
+.dot-sky { background-color: var(--sky); }
+.dot-terracotta { background-color: var(--terracotta); }
+.dot-burgundy { background-color: var(--burgundy); }
+.dot-plum { background-color: var(--plum); }
+.dot-teal { background-color: var(--teal); }
+.dot-ochre { background-color: var(--ochre); }
+.dot-rose { background-color: var(--rose); }
+.dot-olive { background-color: var(--olive); }
+.dot-slate { background-color: var(--slate); }
+
+/* Subtle colored borders */
+.border-accent-primary { border-color: var(--primary-light); }
+.border-accent-sepia { border-color: var(--sepia-light); }
+.border-accent-sage { border-color: var(--sage-light); }
+.border-accent-sky { border-color: var(--sky-light); }
+.border-accent-terracotta { border-color: var(--terracotta-light); }
+.border-accent-burgundy { border-color: var(--burgundy-light); }
+.border-accent-plum { border-color: var(--plum-light); }
+.border-accent-teal { border-color: var(--teal-light); }
 
 @keyframes toast-slide-in {
   from {
@@ -79,4 +323,17 @@ body {
 
 .animate-dialog-in {
   animation: dialog-in 150ms ease-out;
+}
+
+/* Button hover darkening effect */
+button,
+[role="button"],
+.btn {
+  transition: filter 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+button:hover:not(:disabled),
+[role="button"]:hover:not(:disabled),
+.btn:hover:not(:disabled) {
+  filter: brightness(0.92);
 }

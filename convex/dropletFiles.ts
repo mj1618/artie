@@ -322,6 +322,8 @@ export const executeBashCommand = action({
         bashCommandId: args.bashCommandId,
       });
 
+      // Execute in the container's /app directory
+      const command = `cd /app && ${bashCommand.command}`;
       const response = await fetch(`${droplet.apiUrl}/exec`, {
         method: "POST",
         headers: {
@@ -329,7 +331,7 @@ export const executeBashCommand = action({
           Authorization: `Bearer ${droplet.apiSecret}`,
         },
         body: JSON.stringify({
-          command: bashCommand.command,
+          command,
           timeout: 120000, // 2 minute timeout for commands
         }),
       });

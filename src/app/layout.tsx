@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Artie",
+  title: "Composure",
   description: "Built with Next.js and Convex",
 };
 

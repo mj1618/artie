@@ -1,5 +1,16 @@
 # Epic: Firecracker VM Runtime for Project Previews
 
+## Progress
+
+- [x] **Phase 2.1**: Schema updates — `firecrackerVms` table and `"firecracker"` runtime option added to `convex/schema.ts`
+- [x] **Phase 2.2**: Backend module — `convex/firecrackerVms.ts` created with queries, mutations, and actions
+- [x] **Phase 2.3**: HTTP endpoint — `/firecracker-status` callback endpoint added to `convex/http.ts`
+- [x] **Phase 1**: Extend Host API — `setup` and `exec` endpoints added to `/opt/firecracker/api/server.js` on host `157.230.181.26`, with `execInVm`, `reportStatus`, `waitForPort`, and `runSetup` helpers. Service restarted and tested.
+- [x] **Phase 2.4**: Scheduler — `convex/firecrackerScheduler.ts` created with 6 lifecycle functions, cron jobs added to `convex/crons.ts`, `by_status_and_statusChangedAt` index added to schema
+- [x] **Phase 2.5**: File operations & ChatPanel integration — `convex/firecrackerFiles.ts` created with `applyFileChanges` and `executeBashCommand` actions, wired into `ChatPanel.tsx`
+- [x] **Phase 3**: Frontend preview components (FirecrackerPreview, Logs, Terminal)
+- [x] **Phase 4**: Testing & debugging — All build checks pass (codegen, tsc, app start). Browser smoke tests pass: runtime selection, workspace preview, tab switching, error states. Fixed raw HTML error message bug in FirecrackerPreview.
+
 ## Overview
 
 Add a new "Firecracker" runtime option for projects that provides isolated, fast-booting microVMs for previewing Next.js applications. Unlike DigitalOcean Droplets (which create new cloud VMs per session), Firecracker VMs run on a dedicated host machine and boot in under 1 second.

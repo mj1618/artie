@@ -3,13 +3,15 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const { signIn } = useAuthActions();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,9 +19,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/home");
+      router.push(redirect || "/home");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, redirect]);
 
   if (isLoading || isAuthenticated) {
     return null;
@@ -41,7 +43,7 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm rounded-lg border border-paper-300 bg-paper-200 p-8 shadow-lg">
       <h1 className="mb-6 text-center text-2xl font-semibold text-paper-900">
-        Sign in to Artie
+        Sign in to Composure
       </h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
@@ -70,17 +72,25 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-paper-700 py-2 font-medium text-paper-50 hover:bg-paper-800 disabled:opacity-50"
+          className="rounded bg-primary py-2 font-medium text-paper-50 hover:bg-primary-hover disabled:opacity-50"
         >
           {submitting ? "Signing in..." : "Sign in"}
         </button>
       </form>
       <p className="mt-4 text-center text-sm text-paper-600">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-paper-800 underline hover:text-paper-950">
+        <Link href={redirect ? `/signup?redirect=${encodeURIComponent(redirect)}` : "/signup"} className="text-paper-800 underline hover:text-paper-950">
           Sign up
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

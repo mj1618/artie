@@ -46,7 +46,33 @@ export const listByRepo = query({
       .withIndex("by_repoId", (q) => q.eq("repoId", args.repoId))
       .order("desc")
       .collect();
-    return sessions.filter((s) => s.userId === userId);
+    const userSessions = sessions.filter((s) => s.userId === userId);
+
+    const sessionsWithStatus = await Promise.all(
+      userSessions.map(async (session) => {
+        const messages = await ctx.db
+          .query("messages")
+          .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
+          .collect();
+
+        const hasChanges = messages.some((m) => m.changes && m.changes.files.length > 0);
+        const hasPushedChanges = messages.some((m) => m.changes?.committed);
+        const hasPrUrl = messages.some((m) => m.changes?.prUrl);
+
+        let status: "empty" | "has_changes" | "pushed" | "pr_open" = "empty";
+        if (hasPrUrl) {
+          status = "pr_open";
+        } else if (hasPushedChanges) {
+          status = "pushed";
+        } else if (hasChanges) {
+          status = "has_changes";
+        }
+
+        return { ...session, status };
+      }),
+    );
+
+    return sessionsWithStatus;
   },
 });
 
@@ -80,6 +106,36 @@ export const listRecent = query({
     );
 
     return resolved;
+  },
+});
+
+export const requestStop = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get("sessions", args.sessionId);
+    if (!session) throw new Error("Session not found");
+    await ctx.db.patch("sessions", args.sessionId, { stopRequested: true });
+  },
+});
+
+export const clearStop = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch("sessions", args.sessionId, { stopRequested: undefined });
+  },
+});
+
+export const setBranchName = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    branchName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get("sessions", args.sessionId);
+    if (!session) throw new Error("Session not found");
+    await ctx.db.patch("sessions", args.sessionId, {
+      branchName: args.branchName,
+    });
   },
 });
 

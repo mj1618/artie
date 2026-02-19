@@ -32,8 +32,8 @@ export function ChangePreview({
   error,
   onRetry,
 }: ChangePreviewProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [expandedFile, setExpandedFile] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(true);
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<Record<string, "diff" | "full">>({});
   const [reverting, setReverting] = useState(false);
   const revertFileChange = useMutation(api.fileChanges.revertFileChange);
@@ -114,8 +114,8 @@ export function ChangePreview({
       {expanded && (
         <div className="border-t border-paper-800 dark:border-paper-400">
           {files.map((file) => {
-            const isFileExpanded = expandedFile === file.path;
-            const lineCount = file.content.split("\n").length;
+            const isCollapsed = collapsedFiles.has(file.path);
+            const isNew = file.originalContent === undefined;
             return (
               <div
                 key={file.path}
@@ -123,20 +123,41 @@ export function ChangePreview({
               >
                 <button
                   onClick={() =>
-                    setExpandedFile(isFileExpanded ? null : file.path)
+                    setCollapsedFiles((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(file.path)) next.delete(file.path);
+                      else next.add(file.path);
+                      return next;
+                    })
                   }
                   className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-paper-950 dark:hover:bg-paper-300"
                 >
-                  <span className="font-mono text-zinc-700 dark:text-paper-700">
-                    {file.path}
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-zinc-700 dark:text-paper-700">
+                      {file.path}
+                    </span>
+                    {isNew && (
+                      <span className="rounded bg-green-800/40 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+                        new
+                      </span>
+                    )}
                   </span>
-                  <span className="text-paper-600">
-                    {lineCount} line{lineCount !== 1 ? "s" : ""}
-                  </span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className={`h-3 w-3 text-paper-600 transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </button>
-                {isFileExpanded && (
+                {!isCollapsed && (
                   <div>
-                    {file.originalContent !== undefined && (
+                    {!isNew && (
                       <div className="flex gap-1 border-b border-paper-800 px-3 py-1 dark:border-paper-400">
                         <button
                           onClick={() =>
@@ -170,11 +191,10 @@ export function ChangePreview({
                         </button>
                       </div>
                     )}
-                    <div className="max-h-64 overflow-auto bg-paper-950 dark:bg-paper-200">
-                      {file.originalContent !== undefined &&
-                      (viewMode[file.path] ?? "diff") === "diff" ? (
+                    <div className="max-h-80 overflow-auto bg-paper-950 dark:bg-paper-200">
+                      {(viewMode[file.path] ?? "diff") === "diff" ? (
                         <DiffView
-                          oldContent={file.originalContent}
+                          oldContent={file.originalContent ?? ""}
                           newContent={file.content}
                           filePath={file.path}
                         />

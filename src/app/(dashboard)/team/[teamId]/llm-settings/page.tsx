@@ -179,13 +179,13 @@ export default function LlmSettingsPage() {
               <dd className="text-sm font-medium text-paper-800">
                 {llmSettings.llmProvider
                   ? PROVIDER_LABELS[llmSettings.llmProvider] ?? llmSettings.llmProvider
-                  : "Platform Default (OpenAI Codex)"}
+                  : "Platform Default (Anthropic)"}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
               <dt className="text-sm text-paper-600">Model</dt>
               <dd className="text-sm font-medium text-paper-800">
-                {llmSettings.llmModel ?? "gpt-5.2-codex"}
+                {llmSettings.llmModel ?? "claude-opus-4-6"}
               </dd>
             </div>
             <div className="flex items-center justify-between px-4 py-3">

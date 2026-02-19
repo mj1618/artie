@@ -1,7 +1,7 @@
 # Fly.io Sprite Container
 # Runs dev servers with an API for file operations and command execution
 
-FROM node:20-slim
+FROM node:24-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -77,6 +77,13 @@ RUN mkdir -p /tmp/pnpm-warmup2 && cd /tmp/pnpm-warmup2 && \
     }' > package.json && \
     pnpm install && \
     cd / && rm -rf /tmp/pnpm-warmup2
+
+# Install Claude CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Pre-configure Claude CLI to skip onboarding prompts
+RUN mkdir -p /root/.claude && \
+    echo '{"hasCompletedOnboarding": true}' > /root/.claude/settings.json
 
 # Create directories
 RUN mkdir -p /app/sprite-server /app/project /var/log

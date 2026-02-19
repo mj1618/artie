@@ -303,3 +303,155 @@ export const getTeamInternal = internalQuery({
     return await ctx.db.get("teams", args.teamId);
   },
 });
+
+// --- Invite Link functions ---
+
+export const createInviteLink = mutation({
+  args: {
+    teamId: v.id("teams"),
+    expiresAt: v.optional(v.number()),
+    maxUses: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const team = await ctx.db.get("teams", args.teamId);
+    if (!team || team.ownerId !== userId) throw new Error("Not authorized");
+
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let code = "";
+    for (let i = 0; i < 8; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    await ctx.db.insert("inviteLinks", {
+      teamId: args.teamId,
+      code,
+      createdBy: userId,
+      createdAt: Date.now(),
+      expiresAt: args.expiresAt,
+      maxUses: args.maxUses,
+      useCount: 0,
+    });
+
+    return code;
+  },
+});
+
+export const getInviteByCode = query({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    const inviteLink = await ctx.db
+      .query("inviteLinks")
+      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .unique();
+
+    if (!inviteLink) return null;
+
+    const team = await ctx.db.get("teams", inviteLink.teamId);
+    if (!team) return null;
+
+    const now = Date.now();
+    const expired = inviteLink.expiresAt ? inviteLink.expiresAt < now : false;
+    const maxedOut = inviteLink.maxUses
+      ? inviteLink.useCount >= inviteLink.maxUses
+      : false;
+    const valid = !expired && !maxedOut;
+
+    // Optionally check if the current user is already a member
+    const userId = await getAuthUserId(ctx);
+    let isMember = false;
+    if (userId) {
+      const membership = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_teamId_userId", (q) =>
+          q.eq("teamId", inviteLink.teamId).eq("userId", userId),
+        )
+        .unique();
+      isMember = !!membership;
+    }
+
+    return {
+      teamName: team.name,
+      valid,
+      expired,
+      maxedOut,
+      isAuthenticated: !!userId,
+      isMember,
+    };
+  },
+});
+
+export const acceptInviteLink = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const inviteLink = await ctx.db
+      .query("inviteLinks")
+      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .unique();
+
+    if (!inviteLink) throw new Error("Invite link not found");
+
+    const now = Date.now();
+    if (inviteLink.expiresAt && inviteLink.expiresAt < now) {
+      throw new Error("Invite link has expired");
+    }
+    if (inviteLink.maxUses && inviteLink.useCount >= inviteLink.maxUses) {
+      throw new Error("Invite link has reached its maximum uses");
+    }
+
+    const existingMembership = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_teamId_userId", (q) =>
+        q.eq("teamId", inviteLink.teamId).eq("userId", userId),
+      )
+      .unique();
+    if (existingMembership) {
+      throw new Error("You are already a member of this team");
+    }
+
+    await ctx.db.insert("teamMembers", {
+      teamId: inviteLink.teamId,
+      userId,
+      role: "member",
+      invitedAt: inviteLink.createdAt,
+      joinedAt: Date.now(),
+    });
+
+    await ctx.db.patch("inviteLinks", inviteLink._id, {
+      useCount: inviteLink.useCount + 1,
+    });
+
+    return inviteLink.teamId;
+  },
+});
+
+export const listInviteLinks = query({
+  args: { teamId: v.id("teams") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const team = await ctx.db.get("teams", args.teamId);
+    if (!team || team.ownerId !== userId) return [];
+    return await ctx.db
+      .query("inviteLinks")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+  },
+});
+
+export const deleteInviteLink = mutation({
+  args: { inviteLinkId: v.id("inviteLinks") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const inviteLink = await ctx.db.get("inviteLinks", args.inviteLinkId);
+    if (!inviteLink) throw new Error("Invite link not found");
+    const team = await ctx.db.get("teams", inviteLink.teamId);
+    if (!team || team.ownerId !== userId) throw new Error("Not authorized");
+    await ctx.db.delete("inviteLinks", args.inviteLinkId);
+  },
+});

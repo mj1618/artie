@@ -69,7 +69,7 @@ export function ConfirmDialog({
             className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
               variant === "danger"
                 ? "bg-red-600 text-white hover:bg-red-700"
-                : "bg-paper-700 text-paper-50 hover:bg-paper-800"
+                : "bg-primary text-paper-50 hover:bg-primary-hover"
             }`}
           >
             {loading ? (

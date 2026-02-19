@@ -42,6 +42,18 @@ export default defineSchema({
     .index("by_teamId", ["teamId"])
     .index("by_email", ["email"]),
 
+  inviteLinks: defineTable({
+    teamId: v.id("teams"),
+    code: v.string(),
+    createdBy: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+    maxUses: v.optional(v.number()),
+    useCount: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_teamId", ["teamId"]),
+
   repos: defineTable({
     teamId: v.id("teams"),
     githubOwner: v.string(),
@@ -51,11 +63,16 @@ export default defineSchema({
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
     connectedBy: v.string(),
     connectedAt: v.number(),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"))),
+    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"), v.literal("docker"))),
     hasConvex: v.optional(v.boolean()),
     projectType: v.optional(v.string()),
     externalConvexUrl: v.optional(v.string()),
     externalConvexDeployment: v.optional(v.string()),
+    envVars: v.optional(v.array(v.object({
+      key: v.string(),
+      value: v.string(),
+    }))),
+    customPrompt: v.optional(v.string()),
   }).index("by_teamId", ["teamId"]),
 
   sessions: defineTable({
@@ -68,6 +85,7 @@ export default defineSchema({
     name: v.optional(v.string()),
     branchName: v.optional(v.string()),
     featureName: v.optional(v.string()),
+    stopRequested: v.optional(v.boolean()),
   })
     .index("by_repoId", ["repoId"])
     .index("by_userId", ["userId"]),
@@ -78,6 +96,8 @@ export default defineSchema({
     content: v.string(),
     timestamp: v.number(),
     streaming: v.optional(v.boolean()),
+    rawOutput: v.optional(v.string()),
+    imageIds: v.optional(v.array(v.id("_storage"))),
     changes: v.optional(
       v.object({
         files: v.array(v.string()),
@@ -283,4 +303,248 @@ export default defineSchema({
     currentActive: v.number(),
     lastUpdatedAt: v.number(),
   }).index("by_teamId", ["teamId"]),
+
+  // Firecracker VMs - fast-booting microVMs for server-side previews
+  firecrackerVms: defineTable({
+    // Identifiers
+    sessionId: v.id("sessions"),
+    repoId: v.id("repos"),
+    teamId: v.id("teams"),
+    userId: v.string(),
+
+    // VM metadata (assigned by host API)
+    vmId: v.optional(v.string()),
+    vmName: v.string(),
+    vmIp: v.optional(v.string()),
+
+    // Port mapping (from host API response)
+    hostPort: v.optional(v.number()),
+
+    // Constructed URLs
+    previewUrl: v.optional(v.string()),
+    logsUrl: v.optional(v.string()),
+    terminalUrl: v.optional(v.string()),
+
+    // State machine
+    status: v.union(
+      v.literal("requested"),
+      v.literal("creating"),
+      v.literal("booting"),
+      v.literal("cloning"),
+      v.literal("installing"),
+      v.literal("starting"),
+      v.literal("ready"),
+      v.literal("active"),
+      v.literal("stopping"),
+      v.literal("destroying"),
+      v.literal("destroyed"),
+      v.literal("unhealthy")
+    ),
+
+    // Authentication
+    apiSecret: v.string(),
+
+    // Error handling
+    errorMessage: v.optional(v.string()),
+    retryCount: v.number(),
+    lastRetryAt: v.optional(v.number()),
+
+    // Timestamps
+    createdAt: v.number(),
+    statusChangedAt: v.number(),
+    lastHeartbeatAt: v.optional(v.number()),
+    destroyedAt: v.optional(v.number()),
+
+    // Audit trail
+    statusHistory: v.array(v.object({
+      status: v.string(),
+      timestamp: v.number(),
+      reason: v.optional(v.string()),
+    })),
+
+    // Repository context
+    branch: v.optional(v.string()),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_repoId", ["repoId"])
+    .index("by_repoId_branch", ["repoId", "branch"])
+    .index("by_teamId", ["teamId"])
+    .index("by_vmId", ["vmId"])
+    .index("by_vmName", ["vmName"])
+    .index("by_status", ["status"])
+    .index("by_status_and_statusChangedAt", ["status", "statusChangedAt"]),
+
+  // Per-repository VM snapshots for faster subsequent provisioning
+  // After initial clone + install, we snapshot the VM state
+  // Future VMs for the same repo can restore from snapshot instead of full setup
+  repoSnapshots: defineTable({
+    repoId: v.id("repos"),
+    branch: v.string(),
+    commitSha: v.string(),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    sizeBytes: v.number(),
+    status: v.union(
+      v.literal("creating"),
+      v.literal("ready"),
+      v.literal("failed"),
+      v.literal("expired")
+    ),
+    errorMessage: v.optional(v.string()),
+    lastUsedAt: v.optional(v.number()),
+    useCount: v.number(),
+  })
+    .index("by_repoId", ["repoId"])
+    .index("by_repoId_branch", ["repoId", "branch"])
+    .index("by_status", ["status"]),
+
+  // Pre-warmed VM pool for instant provisioning
+  // Pool VMs are created in advance and assigned to sessions on-demand
+  firecrackerVmPool: defineTable({
+    // Host VM metadata (assigned by host API when created)
+    vmId: v.string(),
+    vmName: v.string(),
+    vmIp: v.string(),
+    hostPort: v.number(),
+
+    // Pool status
+    status: v.union(
+      v.literal("creating"),     // Being created on host
+      v.literal("ready"),        // Booted and waiting for assignment
+      v.literal("assigned"),     // Assigned to a session (transitioning to firecrackerVms)
+      v.literal("failed"),       // Creation failed
+      v.literal("destroying")    // Being cleaned up
+    ),
+
+    // Timestamps
+    createdAt: v.number(),
+    readyAt: v.optional(v.number()),
+    assignedAt: v.optional(v.number()),
+
+    // Error info
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_status", ["status"])
+    .index("by_vmId", ["vmId"])
+    .index("by_vmName", ["vmName"]),
+
+  // Docker Containers - containers running on DigitalOcean Docker host
+  dockerContainers: defineTable({
+    // Identifiers
+    sessionId: v.id("sessions"),
+    repoId: v.id("repos"),
+    teamId: v.id("teams"),
+    userId: v.string(),
+
+    // Container metadata (assigned by host API)
+    containerId: v.optional(v.string()),
+    containerName: v.string(),
+
+    // Port mapping (from host API response)
+    hostPort: v.optional(v.number()),
+
+    // Constructed URLs
+    previewUrl: v.optional(v.string()),
+    logsUrl: v.optional(v.string()),
+    terminalUrl: v.optional(v.string()),
+
+    // State machine
+    status: v.union(
+      v.literal("requested"),
+      v.literal("creating"),
+      v.literal("cloning"),
+      v.literal("installing"),
+      v.literal("starting"),
+      v.literal("ready"),
+      v.literal("active"),
+      v.literal("stopping"),
+      v.literal("destroying"),
+      v.literal("destroyed"),
+      v.literal("unhealthy")
+    ),
+
+    // Authentication
+    apiSecret: v.string(),
+
+    // Error handling
+    errorMessage: v.optional(v.string()),
+    buildLog: v.optional(v.string()),
+    retryCount: v.number(),
+    lastRetryAt: v.optional(v.number()),
+
+    // Timestamps
+    createdAt: v.number(),
+    statusChangedAt: v.number(),
+    lastHeartbeatAt: v.optional(v.number()),
+    destroyedAt: v.optional(v.number()),
+
+    // Audit trail
+    statusHistory: v.array(v.object({
+      status: v.string(),
+      timestamp: v.number(),
+      reason: v.optional(v.string()),
+    })),
+
+    // Repository context
+    branch: v.optional(v.string()),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_repoId", ["repoId"])
+    .index("by_repoId_branch", ["repoId", "branch"])
+    .index("by_teamId", ["teamId"])
+    .index("by_containerId", ["containerId"])
+    .index("by_containerName", ["containerName"])
+    .index("by_status", ["status"])
+    .index("by_status_and_statusChangedAt", ["status", "statusChangedAt"]),
+
+  // Pre-warmed Docker container pool for instant provisioning
+  dockerContainerPool: defineTable({
+    // Container metadata (assigned by host API when created)
+    containerId: v.string(),
+    containerName: v.string(),
+    hostPort: v.number(),
+
+    // Pool status
+    status: v.union(
+      v.literal("creating"),
+      v.literal("ready"),
+      v.literal("assigned"),
+      v.literal("failed"),
+      v.literal("destroying")
+    ),
+
+    // Timestamps
+    createdAt: v.number(),
+    readyAt: v.optional(v.number()),
+    assignedAt: v.optional(v.number()),
+
+    // Error info
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_status", ["status"])
+    .index("by_containerId", ["containerId"])
+    .index("by_containerName", ["containerName"]),
+
+  // Prebuilt Docker images for repos (main branch images)
+  dockerRepoImages: defineTable({
+    repoId: v.id("repos"),
+    branch: v.string(),
+    imageTag: v.string(),
+    commitSha: v.string(),
+    status: v.union(
+      v.literal("building"),
+      v.literal("ready"),
+      v.literal("failed")
+    ),
+    sizeBytes: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    createdBy: v.string(),
+    lastUsedAt: v.optional(v.number()),
+    useCount: v.number(),
+  })
+    .index("by_repoId", ["repoId"])
+    .index("by_repoId_branch", ["repoId", "branch"])
+    .index("by_imageTag", ["imageTag"])
+    .index("by_status", ["status"]),
 });

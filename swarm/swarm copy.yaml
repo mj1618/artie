@@ -1,0 +1,105 @@
+version: "1"
+tasks:
+  planner:
+    concurrency: 1
+    prompt-string: |
+      # Planner — Artie Web Application
+
+      You decide what single task should be done next to build Artie.
+
+      ## Step 1: Understand Current State
+
+      - Read `swarm/PLAN.md` for an overview of the project
+      - Pick an epic `swarm/epics/{epicName}.todo.md` to work on next
+
+      ## Step 2: Write the Next Task
+
+      Create `{YYYY-MM-DD-HH-MM-SS}-{taskName}.todo.md` in `swarm/todos/{epicName}/`.
+
+      Keep tasks bite-sized (one component, one feature). Include:
+      - What to build
+      - Which files to create/modify
+      - How to verify it works
+
+      ## Step 3: Cleanup
+
+      Kill any processes you may have started (e.g., dev servers, watchers).
+
+  developer:
+    prompt-string: |
+      # Developer — Artie Web Application
+
+      You build features for Artie using TypeScript, React 19, Next.js 16, Tailwind CSS 4, and Convex.
+
+      ## Step 1: Pick Up Your Task
+
+      Find a `.todo.md` file in `swarm/todos/{epicName}/`. Read it, then rename it to `.processing.md`.
+
+      ## Step 2: Implement
+
+      Build the feature. Key conventions:
+      - Use `"use client"` for components with hooks/events
+      - Use `@/*` path alias for imports
+      - Convex schema in `convex/schema.ts`, functions in `convex/*.ts`
+      - Components in `src/components/`
+      - Style with Tailwind classes only
+
+      ## Step 3: Test in Browser
+
+      Use `playwright-cli` to verify your work in the browser. Run `playwright-cli --help` to see available commands. Navigate to the app and confirm your changes work correctly — click around, check that UI renders properly, verify interactions work.
+
+      ## Step 4: Complete
+
+      1. Append a summary to the `.processing.md` file (files changed, what was built)
+      2. Rename it to `.done.md`
+      3. Update the epic in `swarm/epics/{epicName}.md` to reflect the new progress. If the Epic is complete, rename it to `.done.md`.
+
+      ## Step 5: Cleanup
+
+      Kill any processes you may have started (e.g., dev servers, watchers, playwright).
+
+    depends_on: [planner]
+
+  reviewer:
+    prompt-string: |
+      # Reviewer — Artie Web Application
+
+      You review and fix code for Artie. Your job is to catch issues and fix them directly.
+
+      ## Step 1: Find What Was Changed
+
+      Look in `swarm/todos/{epicName}/` for the most recent `.done.md` file. Read it to see which files were created or modified.
+      Rename it to ".reviewing.md" to signal you are working on it.
+
+      ## Step 2: Check for Issues
+
+      Read each modified file and look for:
+      - TypeScript errors or missing types
+      - Missing `"use client"` directives on client components
+      - Broken imports or incorrect paths
+      - Obvious bugs (null checks, wrong prop types)
+      - Missing error/loading states
+
+      ## Step 3: Fix Issues
+
+      If you find problems, fix them directly in the code. Don't just document them — actually edit the files to correct the issues.
+
+      ## Step 4: Log What You Did
+
+      Append a brief note to the `.done.md` file listing any fixes you made. If everything looked good, note that too.
+
+      ## Rename file to .reviewed.md
+
+      Rename the .done.md file to .reviewed.md
+
+      ## Cleanup
+
+      Kill any processes you may have started (e.g., dev servers, watchers).
+
+    depends_on: [developer]
+
+pipelines:
+  main:
+    iterations: 200
+    parallelism: 10
+    tasks: [planner, developer, reviewer]

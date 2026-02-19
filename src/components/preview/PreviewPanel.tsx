@@ -14,8 +14,11 @@ import { useToast } from "@/lib/useToast";
 import { SandpackPreview } from "./SandpackPreview";
 import { FlyioSpritePreview } from "./FlyioSpritePreview";
 import { DropletPreview } from "./DropletPreview";
+import { FirecrackerPreview } from "./FirecrackerPreview";
+import { DockerPreview } from "./DockerPreview";
+import { ReviewTab } from "./ReviewTab";
 
-type RuntimeType = "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet";
+type RuntimeType = "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet" | "firecracker" | "docker";
 
 interface PreviewPanelProps {
   repoId: Id<"repos">;
@@ -256,12 +259,22 @@ export function PreviewPanel({ repoId, sessionId, branch, runtime = "webcontaine
     return <DropletPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
   }
 
+  // If Firecracker runtime, render FirecrackerPreview component
+  if (runtime === "firecracker") {
+    return <FirecrackerPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
+  }
+
+  // If Docker runtime, render DockerPreview component
+  if (runtime === "docker") {
+    return <DockerPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
+  }
+
   // WebContainer runtime (default)
   return <WebContainerPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
 }
 
 function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelProps, "runtime">) {
-  const [view, setView] = useState<"preview" | "code" | "terminal">("preview");
+  const [view, setView] = useState<"preview" | "code" | "terminal" | "review">("preview");
   const [showDetails, setShowDetails] = useState(false);
   const { phase, previewUrl, error, output, retry, refreshFiles, refreshing } =
     useWorkspaceContainer(repoId, sessionId, { branch });
@@ -338,10 +351,18 @@ function WebContainerPreview({ repoId, sessionId, branch }: Omit<PreviewPanelPro
         >
           Terminal
         </button>
+        <button
+          onClick={() => setView("review")}
+          className={tabClass(view === "review")}
+        >
+          Review
+        </button>
       </div>
 
       {/* Content area */}
-      {view === "terminal" ? (
+      {view === "review" ? (
+        <ReviewTab sessionId={sessionId} />
+      ) : view === "terminal" ? (
         <TerminalOutput output={output} bashCommands={bashCommands} />
       ) : view === "code" ? (
         <FileExplorer containerReady={phase !== "idle" && phase !== "booting"} />

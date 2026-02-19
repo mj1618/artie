@@ -23,6 +23,29 @@ export const saveBashCommand = internalMutation({
   },
 });
 
+export const saveBashCommandWithResult = internalMutation({
+  args: {
+    sessionId: v.id("sessions"),
+    messageId: v.id("messages"),
+    command: v.string(),
+    output: v.string(),
+    exitCode: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("bashCommands", {
+      sessionId: args.sessionId,
+      messageId: args.messageId,
+      command: args.command,
+      status: args.exitCode === 0 ? "completed" : "failed",
+      output: args.output,
+      exitCode: args.exitCode,
+      createdAt: Date.now(),
+      startedAt: Date.now(),
+      completedAt: Date.now(),
+    });
+  },
+});
+
 export const getPendingCommand = query({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {

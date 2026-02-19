@@ -47,6 +47,45 @@ function getSessionLabel(session: Doc<"sessions">): string {
   return formatSessionDate(session.createdAt);
 }
 
+type SessionStatus = "empty" | "has_changes" | "pushed" | "pr_open";
+
+type SessionWithStatus = Doc<"sessions"> & { status: SessionStatus };
+
+function StatusBadge({ status }: { status: SessionStatus }) {
+  if (status === "empty") {
+    return null;
+  }
+
+  if (status === "has_changes") {
+    return (
+      <span
+        className="inline-flex h-2 w-2 shrink-0 rounded-full bg-amber-400"
+        title="Unpushed changes"
+      />
+    );
+  }
+
+  if (status === "pushed") {
+    return (
+      <span
+        className="inline-flex h-2 w-2 shrink-0 rounded-full bg-green-500"
+        title="Changes pushed"
+      />
+    );
+  }
+
+  if (status === "pr_open") {
+    return (
+      <span
+        className="inline-flex h-2 w-2 shrink-0 rounded-full bg-purple-500"
+        title="Pull request open"
+      />
+    );
+  }
+
+  return null;
+}
+
 export function SessionPicker({
   sessions,
   activeSessionId,
@@ -55,7 +94,7 @@ export function SessionPicker({
   onDeleteSession,
   onRenameSession,
 }: {
-  sessions: Doc<"sessions">[];
+  sessions: SessionWithStatus[];
   activeSessionId: Id<"sessions"> | null;
   onSelectSession: (sessionId: Id<"sessions">) => void;
   onNewChat: () => void;
@@ -139,7 +178,7 @@ export function SessionPicker({
         >
           <path
             fillRule="evenodd"
-            d="M8 2a.75.75 0 0 1 .75.75v4.5h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5v-4.5A.75.75 0 0 1 8 2Z"
+            d="M1 8.74c0 .983.713 1.825 1.69 1.943.904.108 1.817.19 2.737.243.363.02.688.231.85.556l1.052 2.103a.75.75 0 0 0 1.342 0l1.052-2.103c.162-.325.487-.535.85-.556.92-.053 1.833-.134 2.738-.243.976-.118 1.689-.96 1.689-1.942V4.259c0-.982-.713-1.824-1.69-1.942a44.45 44.45 0 0 0-10.62 0C1.712 2.435 1 3.277 1 4.26v4.482Z"
             clipRule="evenodd"
           />
         </svg>
@@ -216,8 +255,11 @@ export function SessionPicker({
                       className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="truncate text-xs font-medium text-zinc-700 dark:text-paper-700">
-                          {session.featureName ?? getSessionLabel(session)}
+                        <span className="flex items-center gap-1.5 truncate text-xs font-medium text-zinc-700 dark:text-paper-700">
+                          <StatusBadge status={session.status} />
+                          <span className="truncate">
+                            {session.featureName ?? getSessionLabel(session)}
+                          </span>
                         </span>
                         <span className="ml-2 shrink-0 text-[10px] text-paper-600">
                           {formatRelativeTime(session.lastActiveAt)}
@@ -241,9 +283,32 @@ export function SessionPicker({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      handleStartRename(session);
+                    }}
+                    className="shrink-0 rounded p-0.5 text-paper-600 opacity-0 transition-opacity hover:text-paper-800 group-hover:opacity-100 dark:text-paper-500 dark:hover:text-paper-700"
+                    title="Rename session"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      className="h-3.5 w-3.5"
+                    >
+                      <path
+                        d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474Z"
+                      />
+                      <path
+                        d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 1 14 9v2.25A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 11.25v-6.5A2.75 2.75 0 0 1 4.75 2H7a.75.75 0 0 1 0 1.5H4.75Z"
+                      />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setDeleteSessionId(session._id);
                     }}
-                    className="ml-1 shrink-0 rounded p-0.5 text-paper-600 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-paper-500 dark:hover:text-red-400"
+                    className="shrink-0 rounded p-0.5 text-paper-600 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-paper-500 dark:hover:text-red-400"
                     title="Delete session"
                   >
                     <svg

@@ -3,13 +3,15 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 
-export default function SignupPage() {
+function SignupForm() {
   const { signIn } = useAuthActions();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,9 +22,9 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/home");
+      router.push(redirect || "/home");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, redirect]);
 
   if (isLoading || isAuthenticated) {
     return null;
@@ -148,17 +150,25 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={submitting || !isValid}
-          className="rounded bg-paper-700 py-2 font-medium text-paper-50 hover:bg-paper-800 disabled:opacity-50"
+          className="rounded bg-primary py-2 font-medium text-paper-50 hover:bg-primary-hover disabled:opacity-50"
         >
           {submitting ? "Creating account..." : "Sign up"}
         </button>
       </form>
       <p className="mt-4 text-center text-sm text-paper-600">
         Already have an account?{" "}
-        <Link href="/login" className="text-paper-800 underline hover:text-paper-950">
+        <Link href={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login"} className="text-paper-800 underline hover:text-paper-950">
           Sign in
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

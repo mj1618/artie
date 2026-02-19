@@ -72,20 +72,23 @@ function NewFeatureDialog({
       aria-modal="true"
     >
       <div className="w-full max-w-md rounded-lg border border-paper-400 bg-paper-200 p-6 shadow-xl animate-dialog-in">
-        <h2 className="mb-4 text-lg font-semibold text-paper-950">
+        <h2 className="text-lg font-semibold text-paper-950">
           New Feature
         </h2>
+        <p className="mb-4 mt-1 text-sm text-paper-600">
+          Start working on a new idea. Each feature gets its own conversation and git branch.
+        </p>
 
         <div className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-paper-700">
-              Feature name
+              What are you building?
             </label>
             <input
               type="text"
               value={featureName}
               onChange={(e) => setFeatureName(e.target.value)}
-              placeholder="e.g. Update hero section"
+              placeholder="e.g. Update hero section, Add dark mode, Fix login bug"
               autoFocus
               className="w-full rounded-md border border-paper-400 bg-paper-300 px-3 py-2 text-sm text-paper-950 placeholder:text-paper-500 outline-none focus:border-paper-500"
               onKeyDown={(e) => {
@@ -94,11 +97,14 @@ function NewFeatureDialog({
                 }
               }}
             />
+            <p className="mt-1 text-xs text-paper-500">
+              Give your feature a short, descriptive name.
+            </p>
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-paper-700">
-              Branch name
+              Git branch
             </label>
             <input
               type="text"
@@ -116,7 +122,7 @@ function NewFeatureDialog({
               }}
             />
             <p className="mt-1 text-xs text-paper-500">
-              Branch will be created on GitHub when you push changes.
+              Auto-generated from the feature name. The branch will be created on GitHub when you push.
             </p>
           </div>
         </div>
@@ -240,6 +246,18 @@ function WorkspacePageInner() {
   const activeSession = sessions?.find((s) => s._id === sessionId);
   const activeBranchName =
     activeSession?.branchName ?? repo?.defaultBranch;
+
+  // Keyboard shortcut: Cmd+N / Ctrl+N to open new feature dialog
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        setShowNewFeatureDialog(true);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleNewChatRequest = () => {
     setShowNewFeatureDialog(true);

@@ -17,13 +17,14 @@ export const saveFileChanges = internalMutation({
         originalContent: v.optional(v.string()),
       }),
     ),
+    applied: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("fileChanges", {
       sessionId: args.sessionId,
       messageId: args.messageId,
       files: args.files,
-      applied: false,
+      applied: args.applied ?? false,
       createdAt: Date.now(),
     });
   },
@@ -92,6 +93,45 @@ export const getCurrentFiles = internalQuery({
       }
     }
     return currentFiles;
+  },
+});
+
+export const getSessionDiff = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const allChanges = await ctx.db
+      .query("fileChanges")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .order("asc")
+      .collect();
+
+    const files: Record<
+      string,
+      { originalContent: string | undefined; currentContent: string }
+    > = {};
+
+    for (const change of allChanges) {
+      if (change.reverted) continue;
+      for (const file of change.files) {
+        if (!(file.path in files)) {
+          files[file.path] = {
+            originalContent: file.originalContent,
+            currentContent: file.content,
+          };
+        } else {
+          files[file.path].currentContent = file.content;
+        }
+      }
+    }
+
+    return Object.entries(files)
+      .map(([path, data]) => ({
+        path,
+        originalContent: data.originalContent ?? "",
+        currentContent: data.currentContent,
+        isNew: data.originalContent === undefined,
+      }))
+      .sort((a, b) => a.path.localeCompare(b.path));
   },
 });
 

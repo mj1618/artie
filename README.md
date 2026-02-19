@@ -1,4 +1,4 @@
-# Artie
+# Composure
 
 A Next.js application with Tailwind CSS and Convex backend.
 

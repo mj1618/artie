@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { action, ActionCtx } from "./_generated/server";
+import { action, internalAction, ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { Octokit } from "@octokit/rest";
 import { Id } from "./_generated/dataModel";
@@ -704,7 +704,7 @@ export const pushChanges = action({
     if (!fileChange) throw new Error("File changes not found");
 
     const firstLine: string = message.content.split("\n")[0].slice(0, 72);
-    const defaultCommitMessage = `Artie: ${firstLine}`;
+    const defaultCommitMessage = `Composure: ${firstLine}`;
     const commitMessage = args.commitMessage ?? defaultCommitMessage;
     const token = await getUserGithubToken(ctx);
     const octokit = createOctokit(token);
@@ -737,9 +737,9 @@ export const pushChanges = action({
         throw new Error(`Failed to commit: ${errMsg}`);
       }
     } else {
-      const branchName = args.branchName ?? `artie/${Date.now()}`;
+      const branchName = args.branchName ?? `composure/${Date.now()}`;
       const prTitle = args.prTitle ?? commitMessage;
-      const prBody = args.prBody ?? `## Changes made by Artie\n\n${message.content}\n\n### Files changed\n${fileChange.files.map((f: { path: string }) => `- \`${f.path}\``).join("\n")}`;
+      const prBody = args.prBody ?? `## Changes made by Composure\n\n${message.content}\n\n### Files changed\n${fileChange.files.map((f: { path: string }) => `- \`${f.path}\``).join("\n")}`;
 
       // Get the default branch HEAD SHA
       const { data: refData } = await octokit.git.getRef({
@@ -789,5 +789,367 @@ export const pushChanges = action({
         branchName,
       };
     }
+  },
+});
+
+// ---- Pull Request Actions ----
+
+export const listOpenPullRequests = action({
+  args: {},
+  handler: async (ctx) => {
+    const token = await getUserGithubToken(ctx);
+    if (!token) {
+      throw new Error(
+        "GitHub account not connected. Please connect your GitHub account in Settings first.",
+      );
+    }
+
+    // Get all repos the user has connected
+    const repos = await ctx.runQuery(api.projects.listAll);
+    if (!repos || repos.length === 0) {
+      return [];
+    }
+
+    const octokit = createOctokit(token);
+    const allPRs: Array<{
+      repoId: string;
+      repoFullName: string;
+      teamName: string;
+      prNumber: number;
+      title: string;
+      body: string;
+      author: string;
+      authorAvatar: string;
+      createdAt: string;
+      updatedAt: string;
+      headBranch: string;
+      baseBranch: string;
+      isDraft: boolean;
+      htmlUrl: string;
+    }> = [];
+
+    // Fetch PRs from each repo in parallel
+    const prPromises = repos.map(async (repo) => {
+      try {
+        const { data: prs } = await octokit.pulls.list({
+          owner: repo.githubOwner,
+          repo: repo.githubRepo,
+          state: "open",
+          sort: "updated",
+          direction: "desc",
+          per_page: 30,
+        });
+
+        return prs.map((pr) => ({
+          repoId: repo._id,
+          repoFullName: `${repo.githubOwner}/${repo.githubRepo}`,
+          teamName: repo.teamName ?? "",
+          prNumber: pr.number,
+          title: pr.title,
+          body: pr.body ?? "",
+          author: pr.user?.login ?? "unknown",
+          authorAvatar: pr.user?.avatar_url ?? "",
+          createdAt: pr.created_at,
+          updatedAt: pr.updated_at,
+          headBranch: pr.head.ref,
+          baseBranch: pr.base.ref,
+          isDraft: pr.draft ?? false,
+          htmlUrl: pr.html_url,
+        }));
+      } catch (err) {
+        console.error(
+          `[listOpenPullRequests] Failed to fetch PRs for ${repo.githubOwner}/${repo.githubRepo}:`,
+          err instanceof Error ? err.message : String(err),
+        );
+        return [];
+      }
+    });
+
+    const results = await Promise.all(prPromises);
+    for (const prs of results) {
+      allPRs.push(...prs);
+    }
+
+    // Sort all PRs by updated time
+    allPRs.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+
+    return allPRs;
+  },
+});
+
+export const getPullRequestDetail = action({
+  args: {
+    repoId: v.id("repos"),
+    prNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const repo = await getRepo(ctx, args.repoId);
+    const token = await getUserGithubToken(ctx);
+    const octokit = createOctokit(token);
+
+    // Fetch PR details, files, and reviews in parallel
+    const [prResponse, filesResponse, reviewsResponse] = await Promise.all([
+      octokit.pulls.get({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        pull_number: args.prNumber,
+      }),
+      octokit.pulls.listFiles({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        pull_number: args.prNumber,
+        per_page: 100,
+      }),
+      octokit.pulls.listReviews({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        pull_number: args.prNumber,
+        per_page: 100,
+      }),
+    ]);
+
+    const pr = prResponse.data;
+    const files = filesResponse.data;
+    const reviews = reviewsResponse.data;
+
+    return {
+      prNumber: pr.number,
+      title: pr.title,
+      body: pr.body ?? "",
+      state: pr.state,
+      author: pr.user?.login ?? "unknown",
+      authorAvatar: pr.user?.avatar_url ?? "",
+      createdAt: pr.created_at,
+      updatedAt: pr.updated_at,
+      headBranch: pr.head.ref,
+      baseBranch: pr.base.ref,
+      isDraft: pr.draft ?? false,
+      mergeable: pr.mergeable,
+      mergeableState: pr.mergeable_state ?? "unknown",
+      merged: pr.merged,
+      additions: pr.additions,
+      deletions: pr.deletions,
+      changedFiles: pr.changed_files,
+      htmlUrl: pr.html_url,
+      repoFullName: `${repo.githubOwner}/${repo.githubRepo}`,
+      files: files.map((f) => ({
+        filename: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        patch: f.patch ?? "",
+        previousFilename: f.previous_filename,
+      })),
+      reviews: reviews.map((r) => ({
+        user: r.user?.login ?? "unknown",
+        state: r.state,
+        body: r.body ?? "",
+        submittedAt: r.submitted_at ?? "",
+      })),
+    };
+  },
+});
+
+export const mergePullRequest = action({
+  args: {
+    repoId: v.id("repos"),
+    prNumber: v.number(),
+    mergeMethod: v.union(
+      v.literal("merge"),
+      v.literal("squash"),
+      v.literal("rebase"),
+    ),
+    deleteBranch: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const repo = await getRepo(ctx, args.repoId);
+    const token = await getUserGithubToken(ctx);
+    const octokit = createOctokit(token);
+
+    try {
+      // Get PR details first to get the branch name
+      const { data: pr } = await octokit.pulls.get({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        pull_number: args.prNumber,
+      });
+
+      // Merge the PR
+      const { data: mergeResult } = await octokit.pulls.merge({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        pull_number: args.prNumber,
+        merge_method: args.mergeMethod,
+      });
+
+      // Delete branch if requested and it's not the default branch
+      if (
+        args.deleteBranch &&
+        pr.head.ref !== repo.defaultBranch &&
+        pr.head.repo?.full_name === `${repo.githubOwner}/${repo.githubRepo}`
+      ) {
+        try {
+          await octokit.git.deleteRef({
+            owner: repo.githubOwner,
+            repo: repo.githubRepo,
+            ref: `heads/${pr.head.ref}`,
+          });
+        } catch (deleteErr) {
+          console.warn(
+            `[mergePullRequest] Failed to delete branch ${pr.head.ref}:`,
+            deleteErr instanceof Error ? deleteErr.message : String(deleteErr),
+          );
+        }
+      }
+
+      return {
+        merged: mergeResult.merged,
+        message: mergeResult.message,
+        sha: mergeResult.sha,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[mergePullRequest] Failed to merge PR:`, message);
+      return {
+        merged: false,
+        message: message,
+        sha: null,
+      };
+    }
+  },
+});
+
+export const approvePullRequest = action({
+  args: {
+    repoId: v.id("repos"),
+    prNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const repo = await getRepo(ctx, args.repoId);
+    const token = await getUserGithubToken(ctx);
+    const octokit = createOctokit(token);
+
+    await octokit.pulls.createReview({
+      owner: repo.githubOwner,
+      repo: repo.githubRepo,
+      pull_number: args.prNumber,
+      event: "APPROVE",
+    });
+
+    return { approved: true };
+  },
+});
+
+/**
+ * Auto-commit file changes to a branch, creating the branch from the default
+ * branch if it doesn't exist yet.  After committing, finds or creates a PR
+ * for the branch so changes are immediately reviewable on GitHub.
+ */
+export const autoCommitToBranch = internalAction({
+  args: {
+    repoId: v.id("repos"),
+    messageId: v.id("messages"),
+    fileChangeId: v.id("fileChanges"),
+    branchName: v.string(),
+    commitMessage: v.string(),
+    prTitle: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ commitSha: string; prUrl?: string } | null> => {
+    const repo = await getRepo(ctx, args.repoId);
+    const fileChange = await ctx.runQuery(api.fileChanges.get, {
+      fileChangeId: args.fileChangeId,
+    });
+    if (!fileChange) {
+      console.error("[autoCommitToBranch] File change not found:", args.fileChangeId);
+      return null;
+    }
+
+    const token = await getUserGithubToken(ctx);
+    const octokit = createOctokit(token);
+
+    // Ensure the branch exists — create from default branch if missing
+    try {
+      await octokit.git.getRef({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        ref: `heads/${args.branchName}`,
+      });
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status;
+      if (status === 404) {
+        const { data: mainRef } = await octokit.git.getRef({
+          owner: repo.githubOwner,
+          repo: repo.githubRepo,
+          ref: `heads/${repo.defaultBranch}`,
+        });
+        await octokit.git.createRef({
+          owner: repo.githubOwner,
+          repo: repo.githubRepo,
+          ref: `refs/heads/${args.branchName}`,
+          sha: mainRef.object.sha,
+        });
+        console.log(`[autoCommitToBranch] Created branch ${args.branchName} from ${repo.defaultBranch}`);
+      } else {
+        throw err;
+      }
+    }
+
+    const result = await createCommitWithFiles(
+      octokit,
+      repo.githubOwner,
+      repo.githubRepo,
+      args.branchName,
+      fileChange.files,
+      args.commitMessage,
+    );
+
+    // Find or create a PR for this branch
+    let prUrl: string | undefined;
+    try {
+      const { data: existingPRs } = await octokit.pulls.list({
+        owner: repo.githubOwner,
+        repo: repo.githubRepo,
+        head: `${repo.githubOwner}:${args.branchName}`,
+        base: repo.defaultBranch,
+        state: "open",
+        per_page: 1,
+      });
+
+      if (existingPRs.length > 0) {
+        prUrl = existingPRs[0].html_url;
+        console.log(`[autoCommitToBranch] Found existing PR: ${prUrl}`);
+      } else {
+        const title = args.prTitle ?? args.commitMessage;
+        const changedFilesList = fileChange.files
+          .map((f: { path: string }) => `- \`${f.path}\``)
+          .join("\n");
+        const body = `## Changes made by Composure\n\n${changedFilesList}`;
+
+        const { data: pr } = await octokit.pulls.create({
+          owner: repo.githubOwner,
+          repo: repo.githubRepo,
+          title,
+          body,
+          head: args.branchName,
+          base: repo.defaultBranch,
+        });
+        prUrl = pr.html_url;
+        console.log(`[autoCommitToBranch] Created PR: ${prUrl}`);
+      }
+    } catch (prErr) {
+      console.error("[autoCommitToBranch] Failed to find/create PR:", prErr);
+    }
+
+    await ctx.runMutation(api.messages.markChangesCommitted, {
+      messageId: args.messageId,
+      commitSha: result.commitSha,
+      ...(prUrl ? { prUrl } : {}),
+    });
+
+    console.log(`[autoCommitToBranch] Committed ${fileChange.files.length} files to ${args.branchName}: ${result.commitSha.slice(0, 7)}`);
+    return { commitSha: result.commitSha, prUrl };
   },
 });

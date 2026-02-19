@@ -9,6 +9,7 @@ interface DiffViewProps {
 }
 
 export function DiffView({ oldContent, newContent, filePath }: DiffViewProps) {
+  const isNewFile = oldContent === "";
   const patch = structuredPatch(filePath, filePath, oldContent, newContent);
 
   if (patch.hunks.length === 0) {
@@ -25,10 +26,12 @@ export function DiffView({ oldContent, newContent, filePath }: DiffViewProps) {
         let newLineNum = hunk.newStart;
         return (
         <div key={hunkIndex}>
-          <div className="bg-paper-800/50 px-2 py-0.5 font-mono text-paper-500 dark:bg-paper-400/50 dark:text-paper-600">
-            @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},
-            {hunk.newLines} @@
-          </div>
+          {!isNewFile && (
+            <div className="bg-paper-800/50 px-2 py-0.5 font-mono text-paper-500 dark:bg-paper-400/50 dark:text-paper-600">
+              @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},
+              {hunk.newLines} @@
+            </div>
+          )}
           {hunk.lines.map((line, lineIndex) => {
             const prefix = line[0];
             const currentLineNum = prefix !== "-" ? newLineNum++ : null;

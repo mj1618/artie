@@ -6,6 +6,7 @@ export const send = mutation({
     sessionId: v.id("sessions"),
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
+    imageIds: v.optional(v.array(v.id("_storage"))),
     changes: v.optional(
       v.object({
         files: v.array(v.string()),
@@ -19,6 +20,7 @@ export const send = mutation({
       role: args.role,
       content: args.content,
       timestamp: Date.now(),
+      ...(args.imageIds && args.imageIds.length > 0 ? { imageIds: args.imageIds } : {}),
       ...(args.changes ? { changes: args.changes } : {}),
     });
 
@@ -88,10 +90,23 @@ export const updateStreamingContent = mutation({
   },
 });
 
+export const updateStreamingRawOutput = mutation({
+  args: {
+    messageId: v.id("messages"),
+    rawOutput: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch("messages", args.messageId, {
+      rawOutput: args.rawOutput,
+    });
+  },
+});
+
 export const finalizeStreamingMessage = mutation({
   args: {
     messageId: v.id("messages"),
     content: v.string(),
+    rawOutput: v.optional(v.string()),
     changes: v.optional(
       v.object({
         files: v.array(v.string()),
@@ -103,8 +118,41 @@ export const finalizeStreamingMessage = mutation({
     await ctx.db.patch("messages", args.messageId, {
       content: args.content,
       streaming: false,
+      ...(args.rawOutput ? { rawOutput: args.rawOutput } : {}),
       ...(args.changes ? { changes: args.changes } : {}),
     });
+  },
+});
+
+export const getLatestRawOutput = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .order("desc")
+      .collect();
+    
+    for (const msg of messages) {
+      if (msg.role === "assistant" && msg.rawOutput) {
+        return { messageId: msg._id, rawOutput: msg.rawOutput, timestamp: msg.timestamp };
+      }
+    }
+    return null;
+  },
+});
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const getImageUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
   },
 });
 

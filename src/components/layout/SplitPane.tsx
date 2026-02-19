@@ -17,6 +17,7 @@ export function SplitPane({
   const dividerRef = useRef<HTMLDivElement>(null);
   const [leftWidth, setLeftWidth] = useState(35);
   const [collapsed, setCollapsed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<"left" | "right">("left");
 
@@ -48,6 +49,7 @@ export function SplitPane({
     divider.setPointerCapture(e.pointerId);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
+    setIsDragging(true);
 
     function onPointerMove(e: PointerEvent) {
       if (!containerRef.current) return;
@@ -62,6 +64,7 @@ export function SplitPane({
       divider!.releasePointerCapture(e.pointerId);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      setIsDragging(false);
       divider!.removeEventListener("pointermove", onPointerMove);
       divider!.removeEventListener("pointerup", onPointerUp);
     }
@@ -107,7 +110,7 @@ export function SplitPane({
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1">
       <div
-        className="shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out"
+        className={`shrink-0 overflow-hidden ${isDragging ? "" : "transition-[width] duration-200 ease-in-out"}`}
         style={{ width: collapsed ? "0%" : `${leftWidth}%` }}
       >
         {left}

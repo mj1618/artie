@@ -19,10 +19,10 @@ function NavItem({
   return (
     <Link
       href={href}
-      className={`block rounded px-3 py-2 text-sm ${
+      className={`block rounded-md px-3 py-2 text-sm font-medium transition-all ${
         active
-          ? "bg-paper-300 text-paper-950"
-          : "text-paper-600 hover:bg-paper-300/50 hover:text-paper-950"
+          ? "bg-paper-50 text-paper-900 shadow-paper-sm ring-1 ring-paper-300"
+          : "text-paper-600 hover:bg-paper-50/80 hover:text-paper-900"
       }`}
     >
       {label}
@@ -45,10 +45,10 @@ function TeamRepos({ teamId }: { teamId: Id<"teams"> }) {
           <Link
             key={repo._id}
             href={repoHref}
-            className={`block rounded px-3 py-1.5 text-xs ${
+            className={`block rounded-md px-3 py-1.5 text-xs transition-colors ${
               isActive
-                ? "bg-paper-300 text-paper-950"
-                : "text-paper-500 hover:bg-paper-300/50 hover:text-paper-700"
+                ? "bg-paper-50 text-paper-800 ring-1 ring-paper-300"
+                : "text-paper-500 hover:bg-paper-50/60 hover:text-paper-700"
             }`}
           >
             {repo.githubOwner}/{repo.githubRepo}
@@ -64,7 +64,7 @@ export function Sidebar() {
   const teams = useQuery(api.teams.listMyTeams);
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-paper-300 bg-paper-200">
+    <aside className="flex w-56 shrink-0 flex-col border-r border-paper-300 bg-paper-200/80">
       <nav className="flex-1 overflow-y-auto p-3">
         <div className="space-y-1">
           <NavItem href="/home" label="Home" active={pathname === "/home"} />
@@ -82,12 +82,12 @@ export function Sidebar() {
 
         <div className="mt-6">
           <div className="flex items-center justify-between px-3 pb-2">
-            <span className="text-xs font-medium tracking-wider text-paper-500 uppercase">
+            <span className="text-xs font-semibold tracking-wider text-paper-500 uppercase">
               Teams
             </span>
             <Link
               href="/home"
-              className="text-paper-500 hover:text-paper-950"
+              className="rounded p-0.5 text-paper-500 transition-colors hover:bg-paper-300 hover:text-paper-800"
               title="Create team"
             >
               <svg
@@ -124,31 +124,31 @@ export function Sidebar() {
                   <div key={team._id}>
                     <Link
                       href={teamHref}
-                      className={`block rounded px-3 py-2 text-sm font-medium ${
+                      className={`block rounded-md px-3 py-2 text-sm font-medium transition-all ${
                         isTeamActive
-                          ? "bg-paper-300 text-paper-950"
-                          : "text-paper-600 hover:bg-paper-300/50 hover:text-paper-950"
+                          ? "bg-paper-50 text-paper-900 shadow-paper-sm ring-1 ring-paper-300"
+                          : "text-paper-600 hover:bg-paper-50/80 hover:text-paper-900"
                       }`}
                     >
                       {team.name}
                     </Link>
-                    <div className="mt-0.5 space-y-0.5 pl-3">
+                    <div className="mt-1 space-y-0.5 pl-3">
                       <Link
                         href={`/team/${team._id}/llm-settings`}
-                        className={`block rounded px-3 py-1.5 text-xs ${
+                        className={`block rounded-md px-3 py-1.5 text-xs transition-colors ${
                           pathname === `/team/${team._id}/llm-settings`
-                            ? "bg-paper-300 text-paper-950"
-                            : "text-paper-500 hover:bg-paper-300/50 hover:text-paper-700"
+                            ? "bg-paper-50 text-paper-800 ring-1 ring-paper-300"
+                            : "text-paper-500 hover:bg-paper-50/60 hover:text-paper-700"
                         }`}
                       >
                         LLM Settings
                       </Link>
                       <Link
                         href={`/team/${team._id}/deploy-keys`}
-                        className={`block rounded px-3 py-1.5 text-xs ${
+                        className={`block rounded-md px-3 py-1.5 text-xs transition-colors ${
                           pathname === `/team/${team._id}/deploy-keys`
-                            ? "bg-paper-300 text-paper-950"
-                            : "text-paper-500 hover:bg-paper-300/50 hover:text-paper-700"
+                            ? "bg-paper-50 text-paper-800 ring-1 ring-paper-300"
+                            : "text-paper-500 hover:bg-paper-50/60 hover:text-paper-700"
                         }`}
                       >
                         Deploy Keys

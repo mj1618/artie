@@ -7,6 +7,11 @@ user: matthew.stephen.james@gmail.com
 pass: xt4yArXEXhDjng8R9T7QTpjL8j&@
 
 
+# firecracker
+
+Firecracker VM info is at @swarm/FIRECRACKER.md
+
+
 
 # use @/ for paths
 
@@ -18,13 +23,14 @@ We're on React 19 which has automatic memoization for `useMemo` and `useCallback
 
 # Commands
 
-Use `npx convex dev --once` for convex codegen.
+Always use `npx convex dev --once` for convex codegen after modifying backend files.
 Don't rm the \_generated directory before building.
 Don't disable typecheck.
 
-Use `npm -s tsc -p tsconfig.json --noEmit` to find frontend ts build errors.
+Use `npx tsc --noEmit` to run a typecheck of the Next.js app.
+Fix any typescript errors including ones that weren't yours.
 
-Use `npm run dev` to run nextjs (you may need to kill it if unresponsive).
+Use `npm run dev` - which will build properly for production and start a `node server.js` process. Note this does NOT watch files, you'll need to kill and restart in order to see any changes.
 
 # Types
 

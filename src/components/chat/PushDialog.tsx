@@ -44,7 +44,7 @@ function slugify(text: string): string {
 
 function getDefaultPrBody(content: string, files: string[]): string {
   const fileList = files.map((f) => `- \`${f}\``).join("\n");
-  return `## Changes made by Artie\n\n${content}\n\n### Files changed\n${fileList}`;
+  return `## Changes made by Composure\n\n${content}\n\n### Files changed\n${fileList}`;
 }
 
 export function PushDialog({
