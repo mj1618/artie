@@ -459,6 +459,15 @@ export function ChatPanel({
 
   const canSend = (input.trim().length > 0 || pendingImages.length > 0) && !sending;
 
+  const prUrl = useMemo(() => {
+    if (!messages) return null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.changes?.prUrl) return m.changes.prUrl;
+    }
+    return null;
+  }, [messages]);
+
   return (
     <div className="flex h-full flex-col bg-white dark:bg-paper-200">
       <SessionPicker
@@ -469,6 +478,21 @@ export function ChatPanel({
         onDeleteSession={handleDeleteSession}
         onRenameSession={handleRenameSession}
       />
+      {prUrl && (
+        <div className="flex items-center gap-2 border-b border-paper-800 px-3 py-1.5 dark:border-paper-400">
+          <a
+            href={prUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md bg-purple-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-purple-500 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+              <path d="M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0 0 .005V3.25Z" />
+            </svg>
+            View Pull Request
+          </a>
+        </div>
+      )}
       <MessageList
         messages={messages ?? []}
         repoId={repoId}

@@ -235,20 +235,7 @@ export function MessageBubble({
               </div>
             )}
 
-            {changes.committed && changes.prUrl && (
-              <div className="mt-2">
-                <a
-                  href={changes.prUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded bg-purple-600 px-2 py-1 text-xs font-medium text-paper-950 hover:bg-purple-500"
-                >
-                  View Pull Request
-                </a>
-              </div>
-            )}
-
-            {changes.committed && changes.commitSha && !changes.prUrl && (
+            {changes.committed && changes.commitSha && (
               <div className="mt-2">
                 <span className="inline-flex items-center gap-1 rounded bg-green-700 px-2 py-1 text-xs font-medium text-paper-950">
                   Committed: {changes.commitSha.slice(0, 7)}
