@@ -190,7 +190,11 @@
     "./builds/20260218215400/types/**/*.ts",
     "./builds/20260218215400/dev/types/**/*.ts",
     "./builds/20260218220253/types/**/*.ts",
-    "./builds/20260218220253/dev/types/**/*.ts"
+    "./builds/20260218220253/dev/types/**/*.ts",
+    "./builds/test_build/types/**/*.ts",
+    "./builds/test_build/dev/types/**/*.ts",
+    "./builds/20260221101702/types/**/*.ts",
+    "./builds/20260221101702/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

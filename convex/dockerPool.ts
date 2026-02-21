@@ -5,7 +5,7 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Doc } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 // Pool configuration
 export const POOL_CONFIG = {
@@ -13,6 +13,8 @@ export const POOL_CONFIG = {
   minSize: 1,
   maxCreating: 2,
   containerPorts: [3000],
+  repoPoolTarget: 1,
+  repoPoolMaxCreating: 2,
 };
 
 const DOCKER_HOST = process.env.DOCKER_HOST_URL!;
@@ -37,40 +39,45 @@ type PoolStats = {
   minSize: number;
 };
 
-// Get pool statistics
+// Get pool statistics (generic pool only)
 export const getPoolStats = internalQuery({
   handler: async (ctx): Promise<PoolStats> => {
-    const [ready, creating, failed] = await Promise.all([
-      ctx.db
-        .query("dockerContainerPool")
-        .withIndex("by_status", (q) => q.eq("status", "ready"))
-        .collect(),
-      ctx.db
-        .query("dockerContainerPool")
-        .withIndex("by_status", (q) => q.eq("status", "creating"))
-        .collect(),
-      ctx.db
-        .query("dockerContainerPool")
-        .withIndex("by_status", (q) => q.eq("status", "failed"))
-        .collect(),
-    ]);
+    const all = await ctx.db
+      .query("dockerContainerPool")
+      .collect();
 
+    const generic = all.filter((c) => !c.repoId);
     return {
-      ready: ready.length,
-      creating: creating.length,
-      failed: failed.length,
+      ready: generic.filter((c) => c.status === "ready").length,
+      creating: generic.filter((c) => c.status === "creating").length,
+      failed: generic.filter((c) => c.status === "failed").length,
       targetSize: POOL_CONFIG.targetSize,
       minSize: POOL_CONFIG.minSize,
     };
   },
 });
 
-// Get a ready container from the pool (oldest first for fairness)
+// Get a ready generic container from the pool (oldest first)
 export const getReadyContainer = internalQuery({
   handler: async (ctx): Promise<Doc<"dockerContainerPool"> | null> => {
-    return await ctx.db
+    const ready = await ctx.db
       .query("dockerContainerPool")
       .withIndex("by_status", (q) => q.eq("status", "ready"))
+      .order("asc")
+      .collect();
+    return ready.find((c) => !c.repoId) ?? null;
+  },
+});
+
+// Get a ready repo-specific pool container
+export const getReadyRepoContainer = internalQuery({
+  args: { repoId: v.id("repos") },
+  handler: async (ctx, args): Promise<Doc<"dockerContainerPool"> | null> => {
+    return await ctx.db
+      .query("dockerContainerPool")
+      .withIndex("by_status_repoId", (q) =>
+        q.eq("status", "ready").eq("repoId", args.repoId)
+      )
       .order("asc")
       .first();
   },
@@ -198,9 +205,15 @@ export const markDestroying = internalMutation({
 
 // Create a container on the Docker host for the pool
 export const createPoolContainer = internalAction({
-  args: { poolContainerId: v.id("dockerContainerPool"), containerName: v.string() },
+  args: {
+    poolContainerId: v.id("dockerContainerPool"),
+    containerName: v.string(),
+    imageTag: v.optional(v.string()),
+    volumeName: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    console.log(`[dockerPool:createPoolContainer] Starting for ${args.containerName}`);
+    const image = args.imageTag || "node:24-slim-git";
+    console.log(`[dockerPool:createPoolContainer] Starting for ${args.containerName} (image: ${image})`);
 
     const apiSecret = process.env.DOCKER_API_SECRET;
     if (!apiSecret) {
@@ -213,6 +226,16 @@ export const createPoolContainer = internalAction({
 
     const hostUrl = process.env.DOCKER_HOST_URL || DOCKER_HOST;
 
+    const createBody: Record<string, unknown> = {
+      name: args.containerName,
+      image,
+      ports: POOL_CONFIG.containerPorts,
+      pool: true,
+    };
+    if (args.volumeName) {
+      createBody.volumeName = args.volumeName;
+    }
+
     try {
       let response = await fetch(`${hostUrl}/api/containers`, {
         method: "POST",
@@ -220,12 +243,7 @@ export const createPoolContainer = internalAction({
           Authorization: `Bearer ${apiSecret}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: args.containerName,
-          image: "node:24-slim-git",
-          ports: POOL_CONFIG.containerPorts,
-          pool: true,
-        }),
+        body: JSON.stringify(createBody),
       });
 
       if (response.status === 409) {
@@ -252,12 +270,7 @@ export const createPoolContainer = internalAction({
             Authorization: `Bearer ${apiSecret}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            name: args.containerName,
-            image: "node:24-slim-git",
-            ports: POOL_CONFIG.containerPorts,
-            pool: true,
-          }),
+          body: JSON.stringify(createBody),
         });
       }
 
@@ -277,7 +290,6 @@ export const createPoolContainer = internalAction({
         hostPort: number;
       };
 
-      // Wait a moment for the container to fully start
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       await ctx.runMutation(internal.dockerPool.updatePoolContainerReady, {
@@ -349,43 +361,36 @@ export const destroyPoolContainer = internalAction({
 // SCHEDULER FUNCTIONS
 // ====================
 
-// Replenish the pool if needed
+// Replenish the pool if needed (generic + repo-specific)
 export const replenishPool = internalMutation({
   handler: async (ctx): Promise<{ created: number; stats: PoolStats }> => {
-    const [readyContainers, creatingContainers, failedContainers] = await Promise.all([
-      ctx.db
-        .query("dockerContainerPool")
-        .withIndex("by_status", (q) => q.eq("status", "ready"))
-        .collect(),
-      ctx.db
-        .query("dockerContainerPool")
-        .withIndex("by_status", (q) => q.eq("status", "creating"))
-        .collect(),
-      ctx.db
-        .query("dockerContainerPool")
-        .withIndex("by_status", (q) => q.eq("status", "failed"))
-        .collect(),
-    ]);
+    const allPool = await ctx.db.query("dockerContainerPool").collect();
+
+    const genericPool = allPool.filter((c) => !c.repoId);
+    const repoPool = allPool.filter((c) => !!c.repoId);
+    const totalCreating = allPool.filter((c) => c.status === "creating").length;
+
+    // --- Generic pool replenishment ---
+    const genericReady = genericPool.filter((c) => c.status === "ready").length;
+    const genericCreating = genericPool.filter((c) => c.status === "creating").length;
 
     const stats: PoolStats = {
-      ready: readyContainers.length,
-      creating: creatingContainers.length,
-      failed: failedContainers.length,
+      ready: genericReady,
+      creating: genericCreating,
+      failed: genericPool.filter((c) => c.status === "failed").length,
       targetSize: POOL_CONFIG.targetSize,
       minSize: POOL_CONFIG.minSize,
     };
 
-    const needed = POOL_CONFIG.targetSize - stats.ready - stats.creating;
-    const canCreate = Math.min(
-      needed,
-      POOL_CONFIG.maxCreating - stats.creating
+    let created = 0;
+
+    const genericNeeded = POOL_CONFIG.targetSize - genericReady - genericCreating;
+    const genericCanCreate = Math.min(
+      genericNeeded,
+      POOL_CONFIG.maxCreating - totalCreating,
     );
 
-    if (canCreate <= 0) {
-      return { created: 0, stats };
-    }
-
-    for (let i = 0; i < canCreate; i++) {
+    for (let i = 0; i < genericCanCreate; i++) {
       const containerName = generatePoolContainerName();
       const now = Date.now();
 
@@ -401,11 +406,67 @@ export const replenishPool = internalMutation({
         poolContainerId,
         containerName,
       });
+      created++;
     }
 
-    console.log(`[dockerPool:replenishPool] Scheduled ${canCreate} new pool containers (ready: ${stats.ready}, creating: ${stats.creating})`);
+    if (genericCanCreate > 0) {
+      console.log(`[dockerPool:replenishPool] Scheduled ${genericCanCreate} generic pool containers (ready: ${genericReady}, creating: ${genericCreating})`);
+    }
 
-    return { created: canCreate, stats };
+    // --- Repo-specific pool replenishment ---
+    const repoImages = await ctx.db
+      .query("dockerRepoImages")
+      .withIndex("by_status", (q) => q.eq("status", "ready"))
+      .collect();
+
+    const recentCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const hotImages = repoImages.filter(
+      (img) => (img.lastUsedAt ?? img.createdAt) > recentCutoff,
+    );
+
+    let repoCreated = 0;
+
+    for (const img of hotImages) {
+      if (totalCreating + created + repoCreated >= POOL_CONFIG.maxCreating + POOL_CONFIG.repoPoolMaxCreating) break;
+
+      const repoReady = repoPool.filter(
+        (c) => c.repoId?.toString() === img.repoId.toString() && c.status === "ready",
+      ).length;
+      const repoCreating = repoPool.filter(
+        (c) => c.repoId?.toString() === img.repoId.toString() && c.status === "creating",
+      ).length;
+
+      if (repoReady + repoCreating >= POOL_CONFIG.repoPoolTarget) continue;
+
+      const repo = await ctx.db.get("repos", img.repoId);
+      if (!repo) continue;
+
+      const containerName = generatePoolContainerName();
+      const now = Date.now();
+      const volumeName = `${repo.githubOwner}-${repo.githubRepo}-node_modules`;
+
+      const poolContainerId = await ctx.db.insert("dockerContainerPool", {
+        containerId: "",
+        containerName,
+        hostPort: 0,
+        status: "creating",
+        repoId: img.repoId,
+        imageTag: img.imageTag,
+        createdAt: now,
+      });
+
+      await ctx.scheduler.runAfter(0, internal.dockerPool.createPoolContainer, {
+        poolContainerId,
+        containerName,
+        imageTag: img.imageTag,
+        volumeName,
+      });
+      repoCreated++;
+
+      console.log(`[dockerPool:replenishPool] Scheduled repo pool container for ${repo.githubOwner}/${repo.githubRepo} (image: ${img.imageTag})`);
+    }
+
+    return { created: created + repoCreated, stats };
   },
 });
 

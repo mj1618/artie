@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
 
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
+RUN pnpm config set store-dir /pnpm-store --global
+
 RUN npm install -g @anthropic-ai/claude-code
 
 # Claude CLI's --dangerously-skip-permissions refuses to run as root,

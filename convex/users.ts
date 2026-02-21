@@ -1,13 +1,43 @@
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId } from "./auth";
 import { v } from "convex/values";
 
 export const currentUser = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
-    return await ctx.db.get("users", userId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    return {
+      _id: identity.subject,
+      email: identity.email,
+      name: identity.name,
+    };
+  },
+});
+
+export const ensureProfile = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return;
+    const userId = identity.subject;
+    const email = identity.email;
+    const name = identity.name;
+    const existing = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (existing) {
+      if (!existing.email && email) {
+        await ctx.db.patch("userProfiles", existing._id, { email });
+      }
+    } else {
+      await ctx.db.insert("userProfiles", {
+        userId,
+        displayName: name ?? email ?? "User",
+        email: email ?? undefined,
+      });
+    }
   },
 });
 
@@ -27,8 +57,10 @@ export const getProfile = query({
 export const updateProfile = mutation({
   args: { displayName: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
+    const email = identity.email;
     const existing = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -36,11 +68,13 @@ export const updateProfile = mutation({
     if (existing) {
       await ctx.db.patch("userProfiles", existing._id, {
         displayName: args.displayName,
+        ...(email && !existing.email ? { email } : {}),
       });
     } else {
       await ctx.db.insert("userProfiles", {
         userId,
         displayName: args.displayName,
+        email: email ?? undefined,
       });
     }
   },
@@ -54,8 +88,10 @@ export const connectGithub = mutation({
     githubTokenExpiresAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
+    const email = identity.email;
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -66,11 +102,13 @@ export const connectGithub = mutation({
         githubRefreshToken: args.githubRefreshToken,
         githubTokenExpiresAt: args.githubTokenExpiresAt,
         githubUsername: args.githubUsername,
+        ...(email && !profile.email ? { email } : {}),
       });
     } else {
       await ctx.db.insert("userProfiles", {
         userId,
         displayName: args.githubUsername,
+        email: email ?? undefined,
         githubAccessToken: args.githubAccessToken,
         githubRefreshToken: args.githubRefreshToken,
         githubTokenExpiresAt: args.githubTokenExpiresAt,

@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId } from "./auth";
 
 export const get = query({
   args: {
@@ -39,7 +39,7 @@ export const addRepo = mutation({
     githubRepo: v.string(),
     defaultBranch: v.optional(v.string()),
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"), v.literal("docker"))),
+    runtime: v.optional(v.literal("docker")),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -68,7 +68,7 @@ export const addRepo = mutation({
       pushStrategy: args.pushStrategy,
       connectedBy: userId,
       connectedAt: Date.now(),
-      runtime: args.runtime ?? "webcontainer",
+      runtime: args.runtime ?? "docker",
     });
   },
 });
@@ -99,7 +99,7 @@ export const updateRepo = mutation({
     repoId: v.id("repos"),
     pushStrategy: v.optional(v.union(v.literal("direct"), v.literal("pr"))),
     defaultBranch: v.optional(v.string()),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"), v.literal("docker"))),
+    runtime: v.optional(v.literal("docker")),
     externalConvexUrl: v.optional(v.string()),
     externalConvexDeployment: v.optional(v.string()),
     clearExternalConvex: v.optional(v.boolean()),
@@ -119,7 +119,7 @@ export const updateRepo = mutation({
     const updates: Partial<{
       pushStrategy: "direct" | "pr";
       defaultBranch: string;
-      runtime: "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet" | "firecracker" | "docker";
+      runtime: "docker";
       externalConvexUrl: string;
       externalConvexDeployment: string;
       envVars: Array<{ key: string; value: string }>;

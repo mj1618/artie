@@ -448,9 +448,6 @@ function extractDisplayContent(text: string): string {
 
 type RuntimeExecInfo =
   | { type: "docker"; hostContainerId: string; hostUrl: string; apiSecret: string }
-  | { type: "sprite"; apiUrl: string; apiSecret: string }
-  | { type: "droplet"; apiUrl: string; apiSecret: string }
-  | { type: "firecracker"; hostVmId: string; hostUrl: string; apiSecret: string }
   | null;
 
 async function resolveRuntimeExecInfo(
@@ -458,68 +455,20 @@ async function resolveRuntimeExecInfo(
   repo: { runtime?: string } | null,
   sessionId: string,
 ): Promise<RuntimeExecInfo> {
-  if (!repo?.runtime) return null;
+  if (!repo?.runtime || repo.runtime !== "docker") return null;
 
-  if (repo.runtime === "docker") {
-    const container = await ctx.runQuery(api.dockerContainers.getForSession, {
-      sessionId: sessionId as any,
-    });
-    if (
-      container &&
-      (container.status === "ready" || container.status === "active") &&
-      container.containerId
-    ) {
-      const apiSecret = process.env.DOCKER_API_SECRET;
-      const hostUrl = process.env.DOCKER_HOST_URL;
-      if (apiSecret && hostUrl) {
-        return { type: "docker", hostContainerId: container.containerId, hostUrl, apiSecret };
-      }
-    }
-  }
-
-  if (repo.runtime === "flyio-sprite") {
-    const sprite = await ctx.runQuery(api.flyioSprites.getBySession, {
-      sessionId: sessionId as any,
-    });
-    if (
-      sprite &&
-      sprite.status === "running" &&
-      sprite.cloneStatus === "ready" &&
-      sprite.apiUrl &&
-      sprite.apiSecret
-    ) {
-      return { type: "sprite", apiUrl: sprite.apiUrl, apiSecret: sprite.apiSecret };
-    }
-  }
-
-  if (repo.runtime === "digitalocean-droplet") {
-    const droplet = await ctx.runQuery(api.droplets.getBySession, {
-      sessionId: sessionId as any,
-    });
-    if (
-      droplet &&
-      (droplet.status === "ready" || droplet.status === "active") &&
-      droplet.apiUrl &&
-      droplet.apiSecret
-    ) {
-      return { type: "droplet", apiUrl: droplet.apiUrl, apiSecret: droplet.apiSecret };
-    }
-  }
-
-  if (repo.runtime === "firecracker") {
-    const vm = await ctx.runQuery(api.firecrackerVms.getForSession, {
-      sessionId: sessionId as any,
-    });
-    if (
-      vm &&
-      (vm.status === "ready" || vm.status === "active") &&
-      vm.vmId
-    ) {
-      const apiSecret = process.env.FIRECRACKER_API_SECRET;
-      const hostUrl = process.env.FIRECRACKER_HOST_URL || "http://157.230.181.26:8080";
-      if (apiSecret) {
-        return { type: "firecracker", hostVmId: vm.vmId, hostUrl, apiSecret };
-      }
+  const container = await ctx.runQuery(api.dockerContainers.getForSession, {
+    sessionId: sessionId as any,
+  });
+  if (
+    container &&
+    (container.status === "ready" || container.status === "active") &&
+    container.containerId
+  ) {
+    const apiSecret = process.env.DOCKER_API_SECRET;
+    const hostUrl = process.env.DOCKER_HOST_URL;
+    if (apiSecret && hostUrl) {
+      return { type: "docker", hostContainerId: container.containerId, hostUrl, apiSecret };
     }
   }
 
@@ -533,52 +482,11 @@ async function execCommandInRuntime(
 ): Promise<{ exitCode: number; output: string }> {
   const fullCommand = `cd /app && ${command}`;
 
-  if (runtimeInfo.type === "docker") {
-    const controller = new AbortController();
-    const fetchTimeout = setTimeout(() => controller.abort(), timeout + 10000);
-    try {
-      const resp = await fetch(
-        `${runtimeInfo.hostUrl}/api/containers/${runtimeInfo.hostContainerId}/exec`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${runtimeInfo.apiSecret}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ command: fullCommand, timeout }),
-          signal: controller.signal,
-        },
-      );
-      if (!resp.ok) throw new Error(`Docker exec failed: ${await resp.text()}`);
-      const result = (await resp.json()) as { exitCode: number; stdout: string; stderr: string };
-      return { exitCode: result.exitCode, output: (result.stdout || "") + (result.stderr || "") };
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        throw new Error(`Command timed out after ${timeout}ms`);
-      }
-      throw err;
-    } finally {
-      clearTimeout(fetchTimeout);
-    }
-  }
-
-  if (runtimeInfo.type === "sprite" || runtimeInfo.type === "droplet") {
-    const resp = await fetch(`${runtimeInfo.apiUrl}/exec`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${runtimeInfo.apiSecret}`,
-      },
-      body: JSON.stringify({ command: fullCommand, timeout }),
-    });
-    if (!resp.ok) throw new Error(`Exec failed: ${await resp.text()}`);
-    const result = (await resp.json()) as { exitCode: number; output: string };
-    return { exitCode: result.exitCode, output: result.output || "" };
-  }
-
-  if (runtimeInfo.type === "firecracker") {
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), timeout + 10000);
+  try {
     const resp = await fetch(
-      `${runtimeInfo.hostUrl}/api/vms/${runtimeInfo.hostVmId}/exec`,
+      `${runtimeInfo.hostUrl}/api/containers/${runtimeInfo.hostContainerId}/exec`,
       {
         method: "POST",
         headers: {
@@ -586,14 +494,20 @@ async function execCommandInRuntime(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ command: fullCommand, timeout }),
+        signal: controller.signal,
       },
     );
-    if (!resp.ok) throw new Error(`Exec failed: ${await resp.text()}`);
+    if (!resp.ok) throw new Error(`Docker exec failed: ${await resp.text()}`);
     const result = (await resp.json()) as { exitCode: number; stdout: string; stderr: string };
     return { exitCode: result.exitCode, output: (result.stdout || "") + (result.stderr || "") };
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(`Command timed out after ${timeout}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(fetchTimeout);
   }
-
-  throw new Error(`Unknown runtime type`);
 }
 
 async function applyFilesToRuntime(
@@ -684,88 +598,8 @@ export const generateResponse = action({
         let fileTreeStr = "";
         const fileContents: Record<string, string> = {};
 
-        // Check if we should fetch from a Fly.io Sprite container
-        const sprite = session
-          ? await ctx.runQuery(api.flyioSprites.getBySession, {
-            sessionId: args.sessionId,
-          })
-          : null;
-
-        const useSpriteForContext =
-          repo.runtime === "flyio-sprite" &&
-          sprite?.status === "running" &&
-          sprite?.cloneStatus === "ready" &&
-          sprite?.apiUrl &&
-          sprite?.apiSecret;
-
-        if (useSpriteForContext && sprite) {
-          // Fetch from Fly.io Sprite container
-          try {
-            const treeResponse = await fetch(
-              `${sprite.apiUrl}/files/tree?maxSize=${MAX_FILE_SIZE}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${sprite.apiSecret}`,
-                },
-              }
-            );
-
-            if (!treeResponse.ok) {
-              throw new Error(`Failed to fetch file tree from sprite: ${await treeResponse.text()}`);
-            }
-
-            const treeData = await treeResponse.json();
-            const tree = treeData.files
-              .filter((f: { path: string; size: number }) => !shouldSkip(f.path, f.size))
-              .map((f: { path: string; size: number; isText: boolean }) => ({
-                path: f.path,
-                type: "blob",
-                size: f.size,
-              }));
-
-            fileTreeStr = tree.map((f: { path: string }) => f.path).join("\n");
-
-            const sessionEdits = await ctx.runQuery(
-              internal.fileChanges.getCurrentFiles,
-              { sessionId: args.sessionId }
-            );
-            const editedPaths = Object.keys(sessionEdits);
-            const contextPaths = selectContextFiles(tree, editedPaths);
-
-            const BATCH = 20;
-            for (let i = 0; i < contextPaths.length; i += BATCH) {
-              const batch = contextPaths.slice(i, i + BATCH);
-              const batchResponse = await fetch(`${sprite.apiUrl}/files/read-batch`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${sprite.apiSecret}`,
-                },
-                body: JSON.stringify({ paths: batch }),
-              });
-
-              if (batchResponse.ok) {
-                const batchData = await batchResponse.json();
-                for (const file of batchData.files) {
-                  if (file.content && !file.error) {
-                    fileContents[file.path] = file.content;
-                  }
-                }
-              }
-            }
-
-            for (const [path, content] of Object.entries(sessionEdits)) {
-              fileContents[path] = content;
-            }
-
-            console.log(`[AI] Fetched ${Object.keys(fileContents).length} files from Sprite container`);
-          } catch (spriteError) {
-            console.error("[AI] Failed to fetch from Sprite, falling back to GitHub:", spriteError);
-          }
-        }
-
         // Check if we should fetch from a Docker container
-        if (Object.keys(fileContents).length === 0 && repo.runtime === "docker") {
+        if (Object.keys(fileContents).length === 0) {
           const dockerContainer = session
             ? await ctx.runQuery(api.dockerContainers.getForSession, {
               sessionId: args.sessionId,

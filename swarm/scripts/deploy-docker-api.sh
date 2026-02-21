@@ -41,6 +41,7 @@ const docker = new Docker();
 const PORT = 8081;
 const API_SECRET = process.env.API_SECRET;
 const REPO_CACHE_DIR = '/opt/docker-manager/repo-cache';
+const PNPM_STORE_DIR = '/opt/docker-manager/pnpm-store';
 const LOGS_DIR = '/opt/docker-manager/logs';
 
 // Port allocation
@@ -175,7 +176,10 @@ app.post('/api/containers', authMiddleware, async (req, res) => {
       portBindings[`${port}/tcp`] = [{ HostPort: String(hostPort + ports.indexOf(port)) }];
     });
 
-    const binds = [`${REPO_CACHE_DIR}:/opt/repo-cache:ro`];
+    const binds = [
+      `${REPO_CACHE_DIR}:/opt/repo-cache:ro`,
+      `${PNPM_STORE_DIR}:/pnpm-store`,
+    ];
     if (volumeName) {
       binds.push(`${volumeName}:/app/node_modules`);
     }
@@ -220,7 +224,8 @@ app.post('/api/containers/:id/setup', authMiddleware, async (req, res) => {
     callbackSecret,
     hasMainImage,
     buildMainImage,
-    envVars = {}
+    envVars = {},
+    restoredFromCheckpoint = false,
   } = req.body;
 
   const containerId = req.params.id;
@@ -243,7 +248,8 @@ app.post('/api/containers/:id/setup', authMiddleware, async (req, res) => {
     callbackSecret,
     hasMainImage,
     buildMainImage,
-    envVars
+    envVars,
+    restoredFromCheckpoint,
   }).catch(err => {
     console.error(`Setup error for ${containerId}:`, err);
   });
@@ -350,7 +356,8 @@ async function runSetup(containerId, opts) {
     callbackSecret,
     hasMainImage,
     buildMainImage,
-    envVars
+    envVars,
+    restoredFromCheckpoint = false,
   } = opts;
 
   const container = docker.getContainer(containerId);
@@ -390,11 +397,75 @@ async function runSetup(containerId, opts) {
     // Initialize build log file inside container
     await execInContainer(container, 'echo "=== Composure Build Log ===" > /tmp/composure-build.log', 5000);
 
+    const [owner, repoName] = repo.split('/');
+
+    // Fast path: container created from checkpoint image — update code, quick install, start
+    if (restoredFromCheckpoint) {
+      await writeBuildLog('restore', 'Restored from checkpoint image, updating code');
+      await sendCallback(callbackUrl, callbackSecret, containerName, 'cloning');
+
+      if (Object.keys(envVars).length > 0) {
+        const envContent = Object.entries(envVars)
+          .map(([k, v]) => `${k}=${v}`)
+          .join('\n');
+        const envB64 = Buffer.from(envContent).toString('base64');
+        await execInContainer(container, `echo '${envB64}' | base64 -d > /app/.env`);
+      }
+
+      // Update bare cache from GitHub if token available, then pull into container
+      const cacheDir = path.join(REPO_CACHE_DIR, owner);
+      const bareRepoPath = path.join(cacheDir, `${repoName}.git`);
+      const remotePath = `file:///opt/repo-cache/${owner}/${repoName}.git`;
+
+      if (githubToken && fs.existsSync(bareRepoPath)) {
+        const cloneUrl = `https://${githubToken}@github.com/${repo}.git`;
+        try {
+          await new Promise((resolve) => {
+            exec(`cd "${bareRepoPath}" && git remote set-url origin "${cloneUrl}" && git fetch origin ${branch}`, { timeout: 60000 }, (err) => {
+              if (err) console.warn(`Bare cache update failed: ${err.message}`);
+              resolve();
+            });
+          });
+        } catch (err) {
+          console.warn(`Bare cache update error: ${err.message}`);
+        }
+      }
+
+      await execInContainer(container,
+        `cd /app && git remote set-url origin ${remotePath} 2>/dev/null; git fetch --depth 1 origin ${branch} 2>/dev/null && git reset --hard origin/${branch} 2>/dev/null`,
+        30000
+      );
+      await writeBuildLog('git_update', 'Pulled latest changes');
+
+      // Quick install in case deps changed (fast — node_modules volume is cached)
+      await sendCallback(callbackUrl, callbackSecret, containerName, 'installing');
+      await execInContainer(container, 'cd /app && pnpm install 2>&1 | tee -a /tmp/composure-build.log', 300000);
+      await writeBuildLog('install', 'Dependencies updated');
+
+      await sendCallback(callbackUrl, callbackSecret, containerName, 'starting');
+      const restoreCheck = await execInContainer(container, `node -e "var s=require('./package.json').scripts||{};process.stdout.write(s.composure?'composure':'dev')"`, 5000);
+      const restoreDevCmd = restoreCheck.stdout.trim() || 'dev';
+      await execInContainer(container, `cd /app && nohup pnpm run ${restoreDevCmd} >> /tmp/composure-build.log 2>&1 &`, 10000);
+      await writeBuildLog('dev_server', `Dev server started via pnpm run ${restoreDevCmd} (restored)`);
+
+      let serverReady = false;
+      for (let i = 0; i < 60; i++) {
+        const check = await execInContainer(container,
+          'curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo 000', 2000);
+        const code = check.stdout.trim();
+        if (code !== '000' && code !== '0') {
+          serverReady = true;
+          break;
+        }
+        await new Promise(r => setTimeout(r, 500));
+      }
+      await writeBuildLog('health_check', serverReady ? 'Server responded' : 'Server did not respond within 30s, reporting ready anyway');
+      await sendCallback(callbackUrl, callbackSecret, containerName, 'ready');
+      return;
+    }
+
     // Report cloning status
     await sendCallback(callbackUrl, callbackSecret, containerName, 'cloning');
-
-    // Clone repo using cache
-    const [owner, repoName] = repo.split('/');
     const cacheDir = path.join(REPO_CACHE_DIR, owner);
     const bareRepoPath = path.join(cacheDir, `${repoName}.git`);
     const lockFile = path.join(cacheDir, `${repoName}.git.lock`);
@@ -402,12 +473,10 @@ async function runSetup(containerId, opts) {
     // Ensure cache directory exists
     await fs.promises.mkdir(cacheDir, { recursive: true });
 
-    // Use file lock to prevent concurrent bare repo operations
     async function waitForLock(maxWaitMs = 120000) {
       const start = Date.now();
       while (fs.existsSync(lockFile)) {
         if (Date.now() - start > maxWaitMs) {
-          // Stale lock - remove it
           try { await fs.promises.unlink(lockFile); } catch {}
           break;
         }
@@ -425,70 +494,67 @@ async function runSetup(containerId, opts) {
       }
     }
 
-    // Clone or fetch bare repo with lock to prevent races
+    if (!githubToken) {
+      throw new Error('githubToken is required for non-checkpoint setup');
+    }
     const cloneUrl = `https://${githubToken}@github.com/${repo}.git`;
-    await withLock(async () => {
-      if (!fs.existsSync(bareRepoPath)) {
-        await new Promise((resolve, reject) => {
-          exec(`git clone --bare "${cloneUrl}" "${bareRepoPath}"`, { timeout: 120000 }, (err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      } else {
-        // Update remote URL with fresh token, then fetch all branches
-        await new Promise((resolve, reject) => {
-          exec(`cd "${bareRepoPath}" && git remote set-url origin "${cloneUrl}" && git fetch --all --prune`, { timeout: 60000 }, (err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      }
-    });
 
-    // Set up repo in container (repo cache is mounted at /opt/repo-cache)
-    const prereqResult = await execInContainer(container, `corepack enable pnpm 2>/dev/null; which git || (apt-get update && apt-get install -y git)`, 120000);
-    await writeBuildLog('prerequisites', prereqResult.stdout);
+    // Check for existing git repo inside container while updating bare cache
+    // (runs in parallel — host git-fetch + container git-check overlap)
+    const [, gitCheck] = await Promise.all([
+      withLock(async () => {
+        if (!fs.existsSync(bareRepoPath)) {
+          await new Promise((resolve, reject) => {
+            exec(`git clone --bare "${cloneUrl}" "${bareRepoPath}"`, { timeout: 120000 }, (err) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+        } else {
+          await new Promise((resolve, reject) => {
+            exec(`cd "${bareRepoPath}" && git remote set-url origin "${cloneUrl}" && git fetch origin ${branch}`, { timeout: 60000 }, (err) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+        }
+      }),
+      execInContainer(container, `test -d /app/.git && echo EXISTS || echo MISSING`, 5000),
+    ]);
 
-    // Check if /app already has a git repo (e.g. from a prebuilt main image)
-    const gitCheck = await execInContainer(container, `test -d /app/.git && echo EXISTS || echo MISSING`, 5000);
     const hasGitRepo = gitCheck.stdout.includes('EXISTS');
-
-    let cloneResult;
     const isNewBranch = branch !== defaultBranch;
     const remotePath = `file:///opt/repo-cache/${owner}/${repoName}.git`;
 
+    let cloneResult;
+
     if (hasGitRepo) {
-      cloneResult = await execInContainer(container,
-        `git remote set-url origin ${remotePath} 2>/dev/null || git remote add origin ${remotePath} && git fetch origin ${branch}`,
-        60000
-      );
+      // Prebuilt image already has repo — fetch + reset in a single exec call
+      cloneResult = await execInContainer(container, [
+        `git remote set-url origin ${remotePath} 2>/dev/null || git remote add origin ${remotePath}`,
+        `git fetch --depth 1 origin ${branch}`,
+        `git checkout -f ${branch}`,
+        `git reset --hard origin/${branch}`,
+      ].join(' && '), 60000);
+
       if (cloneResult.exitCode !== 0 && isNewBranch) {
         console.log(`Branch ${branch} not found on remote, falling back to ${defaultBranch} and creating new branch`);
         cloneResult = await execInContainer(container,
-          `git fetch origin ${defaultBranch} && git checkout -f ${defaultBranch} && git reset --hard origin/${defaultBranch} && git checkout -b ${branch}`,
-          60000
-        );
-      } else if (cloneResult.exitCode === 0) {
-        cloneResult = await execInContainer(container,
-          `git checkout -f ${branch} && git reset --hard origin/${branch}`,
+          `git fetch --depth 1 origin ${defaultBranch} && git checkout -f ${defaultBranch} && git reset --hard origin/${defaultBranch} && git checkout -b ${branch}`,
           60000
         );
       }
     } else {
+      // Fresh container — init + shallow fetch + checkout in a single exec call
       cloneResult = await execInContainer(container,
-        `git init && git remote add origin ${remotePath} && git fetch origin ${branch}`,
+        `git init && git remote add origin ${remotePath} && git fetch --depth 1 origin ${branch} && git checkout -B ${branch} FETCH_HEAD`,
         60000
       );
+
       if (cloneResult.exitCode !== 0 && isNewBranch) {
         console.log(`Branch ${branch} not found on remote, falling back to ${defaultBranch} and creating new branch`);
         cloneResult = await execInContainer(container,
-          `git fetch origin ${defaultBranch} && git checkout FETCH_HEAD -f && git branch -M ${defaultBranch} && git checkout -b ${branch}`,
-          60000
-        );
-      } else if (cloneResult.exitCode === 0) {
-        cloneResult = await execInContainer(container,
-          `git checkout FETCH_HEAD -f && git branch -M ${branch}`,
+          `git fetch --depth 1 origin ${defaultBranch} && git checkout -B ${defaultBranch} FETCH_HEAD && git checkout -b ${branch}`,
           60000
         );
       }
@@ -541,6 +607,29 @@ async function runSetup(containerId, opts) {
       }
     }
 
+    // Create checkpoint image after install (non-blocking, best-effort)
+    if (callbackUrl) {
+      const cpName = `cp-${owner}-${repoName}-${branch}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 60);
+      const checkpointCallbackUrl = callbackUrl.replace('docker-status', 'docker-checkpoint-status');
+      try {
+        await fetch(`http://localhost:${PORT}/api/containers/${containerId}/checkpoint`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${API_SECRET}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            checkpointName: cpName,
+            callbackUrl: checkpointCallbackUrl,
+            callbackSecret: API_SECRET,
+          }),
+        });
+        await writeBuildLog('checkpoint', `Checkpoint ${cpName} creation started`);
+      } catch (err) {
+        console.error('Checkpoint creation request failed:', err.message);
+      }
+    }
+
     // Report starting status
     await sendCallback(callbackUrl, callbackSecret, containerName, 'starting');
 
@@ -549,15 +638,29 @@ async function runSetup(containerId, opts) {
       const envContent = Object.entries(envVars)
         .map(([k, v]) => `${k}=${v}`)
         .join('\n');
-      await execInContainer(container, `echo '${envContent}' > /app/.env`);
+      const envB64 = Buffer.from(envContent).toString('base64');
+      await execInContainer(container, `echo '${envB64}' | base64 -d > /app/.env`);
     }
 
-    // Start dev server — output goes to build log so the SSE logs endpoint can stream it
-    await execInContainer(container, 'cd /app && nohup pnpm run dev >> /tmp/composure-build.log 2>&1 &', 10000);
-    await writeBuildLog('dev_server', 'Dev server started');
+    // Start dev server — prefer "composure" script if available, fall back to "dev"
+    const scriptCheck = await execInContainer(container, `node -e "var s=require('./package.json').scripts||{};process.stdout.write(s.composure?'composure':'dev')"`, 5000);
+    const devCmd = scriptCheck.stdout.trim() || 'dev';
+    await execInContainer(container, `cd /app && nohup pnpm run ${devCmd} >> /tmp/composure-build.log 2>&1 &`, 10000);
+    await writeBuildLog('dev_server', `Dev server started via pnpm run ${devCmd}`);
 
-    // Wait for server to be ready
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Poll for dev server readiness instead of fixed sleep
+    let serverReady = false;
+    for (let i = 0; i < 60; i++) {
+      const check = await execInContainer(container,
+        'curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo 000', 2000);
+      const code = check.stdout.trim();
+      if (code !== '000' && code !== '0') {
+        serverReady = true;
+        break;
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    await writeBuildLog('health_check', serverReady ? 'Server responded' : 'Server did not respond within 30s, reporting ready anyway');
 
     // Report ready
     await sendCallback(callbackUrl, callbackSecret, containerName, 'ready');
@@ -655,6 +758,167 @@ app.get('/api/containers/:id/logs', async (req, res) => {
   } catch (err) {
     res.write(`data: ${JSON.stringify({ error: err.message, timestamp: Date.now() })}\n\n`);
     res.end();
+  }
+});
+
+// ====================
+// CHECKPOINT / RESTORE (docker commit)
+// ====================
+
+// Commit a running container's filesystem as a reusable snapshot image.
+// Unlike CRIU, this captures the filesystem (repo, build artifacts, config)
+// but not running processes. The node_modules volume is separate and reused
+// via the same named volume on restore.
+app.post('/api/containers/:id/checkpoint', authMiddleware, async (req, res) => {
+  const { checkpointName, callbackUrl, callbackSecret } = req.body;
+  const containerId = req.params.id;
+
+  if (!checkpointName) {
+    return res.status(400).json({ error: 'checkpointName is required' });
+  }
+
+  res.json({ status: 'checkpoint_started', checkpointName });
+
+  (async () => {
+    try {
+      const container = docker.getContainer(containerId);
+      const imageTag = `${checkpointName}:latest`;
+
+      await container.commit({
+        repo: checkpointName,
+        tag: 'latest',
+        comment: `Checkpoint of container ${containerId}`,
+      });
+
+      console.log(`Checkpoint image created: ${imageTag} from container ${containerId}`);
+
+      if (callbackUrl) {
+        await fetch(callbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callbackSecret,
+            checkpointName,
+            containerId,
+            imageTag,
+            status: 'ready',
+          }),
+        }).catch(err => console.error('Checkpoint callback error:', err));
+      }
+    } catch (err) {
+      console.error(`Checkpoint failed for ${containerId}:`, err);
+      if (callbackUrl) {
+        await fetch(callbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callbackSecret,
+            checkpointName,
+            containerId,
+            status: 'failed',
+            error: err.message,
+          }),
+        }).catch(cbErr => console.error('Checkpoint callback error:', cbErr));
+      }
+    }
+  })();
+});
+
+// Create a new container from a checkpoint image
+app.post('/api/checkpoints/:name/restore', authMiddleware, async (req, res) => {
+  const { name: checkpointName } = req.params;
+  const { containerName, ports = [3000], volumeName } = req.body;
+
+  try {
+    const imageTag = `${checkpointName}:latest`;
+
+    try {
+      await docker.getImage(imageTag).inspect();
+    } catch (err) {
+      if (err.statusCode === 404) {
+        return res.status(404).json({ error: `Checkpoint image ${imageTag} not found` });
+      }
+      throw err;
+    }
+
+    const hostPort = allocatePort();
+    const portBindings = {};
+    const exposedPorts = {};
+    ports.forEach(port => {
+      exposedPorts[`${port}/tcp`] = {};
+      portBindings[`${port}/tcp`] = [{ HostPort: String(hostPort + ports.indexOf(port)) }];
+    });
+
+    const binds = [
+      `${REPO_CACHE_DIR}:/opt/repo-cache:ro`,
+      `${PNPM_STORE_DIR}:/pnpm-store`,
+    ];
+    if (volumeName) {
+      binds.push(`${volumeName}:/app/node_modules`);
+    }
+
+    const container = await docker.createContainer({
+      Image: imageTag,
+      name: containerName || `restore-${checkpointName}-${Date.now().toString(36)}`,
+      Cmd: ['sleep', 'infinity'],
+      Tty: true,
+      ExposedPorts: exposedPorts,
+      HostConfig: {
+        PortBindings: portBindings,
+        Binds: binds,
+        Memory: 2048 * 1024 * 1024,
+      },
+      WorkingDir: '/app',
+    });
+
+    await container.start();
+
+    const info = await container.inspect();
+    const shortId = info.Id.slice(0, 12);
+
+    console.log(`Restored container ${shortId} from checkpoint image ${imageTag}`);
+
+    res.status(201).json({
+      id: shortId,
+      name: info.Name.replace(/^\//, ''),
+      hostPort,
+      restoredFrom: checkpointName,
+    });
+  } catch (err) {
+    console.error('Restore from checkpoint error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List available checkpoint images
+app.get('/api/checkpoints', authMiddleware, async (req, res) => {
+  try {
+    const images = await docker.listImages();
+    const checkpoints = images
+      .filter(img => img.RepoTags && img.RepoTags.some(tag => tag.startsWith('cp-')))
+      .map(img => ({
+        name: img.RepoTags[0].split(':')[0],
+        imageTag: img.RepoTags[0],
+        size: img.Size,
+        created: img.Created,
+      }));
+    res.json(checkpoints);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a checkpoint image
+app.delete('/api/checkpoints/:name', authMiddleware, async (req, res) => {
+  try {
+    const imageTag = `${req.params.name}:latest`;
+    await docker.getImage(imageTag).remove({ force: true });
+    res.json({ success: true });
+  } catch (err) {
+    if (err.statusCode === 404) {
+      return res.json({ success: true });
+    }
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -774,6 +1038,7 @@ PACKAGE
 # Install dependencies and create systemd service
 echo -e "${YELLOW}Installing dependencies and creating service...${NC}"
 ssh root@"$DOCKER_HOST_IP" << 'REMOTE'
+mkdir -p /opt/docker-manager/pnpm-store
 cd /opt/docker-manager/api
 npm install
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { Cpu } from "lucide-react";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { PushDialog } from "@/components/chat/PushDialog";
 
@@ -154,7 +155,7 @@ export function MessageBubble({
   return (
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
       <span className="mb-1 text-xs text-paper-600">
-        {isUser ? "You" : "Composure"}
+        {isUser ? "You" : <><Cpu className="inline h-3 w-3 text-cyan-500" /> Composure</>}
       </span>
       <div
         className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
@@ -199,19 +200,33 @@ export function MessageBubble({
 
         {changes && changes.files.length > 0 && (
           <div className="mt-2 border-t border-paper-800 pt-2 dark:border-paper-400">
-            <span className="text-xs font-medium text-paper-500 dark:text-paper-600">
-              Changed files:
-            </span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {changes.files.map((file) => (
-                <span
-                  key={file}
-                  className="inline-block rounded bg-paper-800 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-paper-400 dark:text-paper-700"
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-paper-500 dark:text-paper-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="shrink-0 transition-transform group-open:rotate-90"
                 >
-                  {file}
-                </span>
-              ))}
-            </div>
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                {changes.files.length} changed file{changes.files.length !== 1 ? "s" : ""}
+              </summary>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {changes.files.map((file) => (
+                  <span
+                    key={file}
+                    className="inline-block rounded bg-paper-800 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-paper-400 dark:text-paper-700"
+                  >
+                    {file}
+                  </span>
+                ))}
+              </div>
+            </details>
 
             {!changes.committed && fileChangeId && !fileChangeData?.reverted && (
               <div className="mt-2">
@@ -236,8 +251,8 @@ export function MessageBubble({
             )}
 
             {changes.committed && changes.commitSha && (
-              <div className="mt-2">
-                <span className="inline-flex items-center gap-1 rounded bg-green-700 px-2 py-1 text-xs font-medium text-paper-950">
+              <div className="mt-2 flex justify-end">
+                <span className="inline-flex items-center gap-1 rounded bg-green-700 px-2 py-1 text-xs font-medium text-white">
                   Committed: {changes.commitSha.slice(0, 7)}
                 </span>
               </div>

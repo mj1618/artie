@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 
@@ -12,14 +12,17 @@ export function Header({
   repoName?: string;
   branchName?: string;
 }) {
-  const { signOut } = useAuthActions();
+  const { signOut } = useClerk();
+  const { user: clerkUser } = useUser();
   const user = useQuery(api.users.currentUser);
 
-  const initial = user?.email
-    ? user.email.charAt(0).toUpperCase()
-    : user?.name
-      ? user.name.charAt(0).toUpperCase()
-      : "U";
+  const initial = clerkUser?.primaryEmailAddress?.emailAddress
+    ? clerkUser.primaryEmailAddress.emailAddress.charAt(0).toUpperCase()
+    : clerkUser?.firstName
+      ? clerkUser.firstName.charAt(0).toUpperCase()
+      : user?.email
+        ? user.email.charAt(0).toUpperCase()
+        : "U";
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-paper-300 bg-paper-100 px-4 text-paper-950 shadow-paper-sm">
@@ -53,7 +56,7 @@ export function Header({
           {initial}
         </div>
         <button
-          onClick={() => void signOut()}
+          onClick={() => signOut({ redirectUrl: "/login" })}
           className="text-sm text-paper-600 transition-colors hover:text-paper-900"
         >
           Sign out

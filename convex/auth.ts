@@ -1,6 +1,9 @@
-import { convexAuth } from "@convex-dev/auth/server";
-import { Password } from "@convex-dev/auth/providers/Password";
+import { QueryCtx, MutationCtx, ActionCtx } from "./_generated/server";
 
-export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [Password],
-});
+export async function getAuthUserId(
+  ctx: QueryCtx | MutationCtx | ActionCtx,
+): Promise<string | null> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  return identity.subject;
+}

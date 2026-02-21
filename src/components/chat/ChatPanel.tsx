@@ -6,12 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
 import { MessageList } from "@/components/chat/MessageList";
 import { SessionPicker } from "@/components/chat/SessionPicker";
-import { getWebContainer } from "@/lib/webcontainer/index";
-import { writeFile } from "@/lib/webcontainer/files";
-import { runCommand } from "@/lib/webcontainer/runCommand";
 import { useToast } from "@/lib/useToast";
-
-type Runtime = "webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet" | "firecracker" | "docker" | undefined;
 
 type SessionStatus = "empty" | "has_changes" | "pushed" | "pr_open";
 type SessionWithStatus = Doc<"sessions"> & { status: SessionStatus };
@@ -50,55 +45,15 @@ export function ChatPanel({
   const requestStop = useMutation(api.sessions.requestStop);
   const sendMessage = useMutation(api.messages.send);
   const generateUploadUrl = useMutation(api.messages.generateUploadUrl);
-  const generateResponse = useAction(api.ai.generateResponse);
   const generateResponseViaCli = useAction(api.ai.generateResponseViaCli);
-  const markApplied = useMutation(api.fileChanges.markApplied);
   const markFailed = useMutation(api.fileChanges.markFailed);
   const clearFileChangeError = useMutation(api.fileChanges.clearError);
-  const markCommandRunning = useMutation(api.bashCommands.markRunning);
-  const markCommandCompleted = useMutation(api.bashCommands.markCompleted);
-  const markCommandFailed = useMutation(api.bashCommands.markFailed);
-  
-  // Sprite actions for Fly.io runtime
-  const applyFileChangesToSprite = useAction(api.spriteFiles.applyFileChanges);
-  
-  // Droplet actions for DigitalOcean runtime
-  const applyFileChangesToDroplet = useAction(api.dropletFiles.applyFileChanges);
 
-  // Firecracker actions for Firecracker runtime
-  const applyFileChangesToFirecracker = useAction(api.firecrackerFiles.applyFileChanges);
-
-  // Docker actions for Docker runtime
   const applyFileChangesToDocker = useAction(api.dockerFiles.applyFileChanges);
-  
-  // Query repo to get runtime type
-  const repo = useQuery(api.projects.get, { repoId });
-  const runtime: Runtime = repo?.runtime;
-  
-  // Query sprite for this session (only if using flyio-sprite runtime)
-  const sprite = useQuery(
-    api.flyioSprites.getBySession,
-    sessionId && runtime === "flyio-sprite" ? { sessionId } : "skip",
-  );
-  
-  // Query droplet for this session (only if using digitalocean-droplet runtime)
-  const droplet = useQuery(
-    api.droplets.getBySession,
-    sessionId && runtime === "digitalocean-droplet" ? { sessionId } : "skip",
-  );
 
-  // Query Firecracker VM for this session (only if using firecracker runtime)
-  const firecrackerVm = useQuery(
-    api.firecrackerVms.getForPreview,
-    sessionId && runtime === "firecracker"
-      ? { sessionId, repoId, branch: sessions.find((s) => s._id === sessionId)?.branchName }
-      : "skip",
-  );
-
-  // Query Docker container for this session (only if using docker runtime)
   const dockerContainer = useQuery(
     api.dockerContainers.getForSession,
-    sessionId && runtime === "docker" ? { sessionId } : "skip",
+    sessionId ? { sessionId } : "skip",
   );
   
   const messages = useQuery(
@@ -111,10 +66,6 @@ export function ChatPanel({
   );
   const allFileChanges = useQuery(
     api.fileChanges.listBySession,
-    sessionId ? { sessionId } : "skip",
-  );
-  const pendingCommand = useQuery(
-    api.bashCommands.getPendingCommand,
     sessionId ? { sessionId } : "skip",
   );
 
@@ -133,44 +84,21 @@ export function ChatPanel({
     setSessionId(initialSessionId);
   }, [initialSessionId]);
 
-  // Apply file changes to WebContainer, Fly.io Sprite, or DigitalOcean Droplet when they arrive
+  // Apply file changes to Docker container when they arrive
   useEffect(() => {
     if (!latestChange || latestChange.applied || latestChange.reverted || latestChange.error) return;
+    if (dockerContainer === undefined) return;
 
-    // Wait for the container/VM query to load before attempting to apply
-    if (runtime === "docker" && dockerContainer === undefined) return;
-    if (runtime === "firecracker" && firecrackerVm === undefined) return;
-    if (runtime === "flyio-sprite" && sprite === undefined) return;
-    if (runtime === "digitalocean-droplet" && droplet === undefined) return;
-
-    // Prevent duplicate apply calls for the same file change
     if (applyingFileChangeRef.current === latestChange._id) return;
     applyingFileChangeRef.current = latestChange._id;
 
     async function applyChanges() {
-      const useSpriteRuntime =
-        runtime === "flyio-sprite" &&
-        sprite?.status === "running" &&
-        sprite?.cloneStatus === "ready";
-
-      const useDropletRuntime =
-        runtime === "digitalocean-droplet" &&
-        droplet &&
-        (droplet.status === "ready" || droplet.status === "active");
-
-      const useFirecrackerRuntime =
-        runtime === "firecracker" &&
-        firecrackerVm &&
-        (firecrackerVm.status === "ready" || firecrackerVm.status === "active");
-
       const useDockerRuntime =
-        runtime === "docker" &&
         dockerContainer &&
         (dockerContainer.status === "ready" || dockerContainer.status === "active");
 
       try {
         if (useDockerRuntime && dockerContainer) {
-          // Apply via Docker container
           const result = await applyFileChangesToDocker({
             containerId: dockerContainer._id,
             fileChangeId: latestChange!._id,
@@ -178,43 +106,6 @@ export function ChatPanel({
           if (!result.success) {
             throw new Error(result.error || "Failed to apply changes to Docker container");
           }
-        } else if (useFirecrackerRuntime && firecrackerVm) {
-          // Apply via Firecracker VM
-          const result = await applyFileChangesToFirecracker({
-            vmId: firecrackerVm._id,
-            fileChangeId: latestChange!._id,
-          });
-          if (!result.success) {
-            throw new Error(result.error || "Failed to apply changes to Firecracker VM");
-          }
-          // Note: markApplied is called inside applyFileChangesToFirecracker action
-        } else if (useSpriteRuntime && sprite) {
-          // Apply via Fly.io Sprite container
-          const result = await applyFileChangesToSprite({
-            spriteId: sprite._id,
-            fileChangeId: latestChange!._id,
-          });
-          if (!result.success) {
-            throw new Error(result.error || "Failed to apply changes to Sprite");
-          }
-          // Note: markApplied is called inside applyFileChangesToSprite action
-        } else if (useDropletRuntime && droplet) {
-          // Apply via DigitalOcean Droplet container
-          const result = await applyFileChangesToDroplet({
-            dropletId: droplet._id,
-            fileChangeId: latestChange!._id,
-          });
-          if (!result.success) {
-            throw new Error(result.error || "Failed to apply changes to Droplet");
-          }
-          // Note: markApplied is called inside applyFileChangesToDroplet action
-        } else {
-          // Apply via WebContainer (default)
-          const container = await getWebContainer();
-          for (const file of latestChange!.files) {
-            await writeFile(container, file.path, file.content);
-          }
-          await markApplied({ fileChangeId: latestChange!._id });
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
@@ -232,45 +123,7 @@ export function ChatPanel({
     }
 
     applyChanges();
-  }, [latestChange, markApplied, markFailed, toast, runtime, sprite, droplet, firecrackerVm, dockerContainer, applyFileChangesToSprite, applyFileChangesToDroplet, applyFileChangesToFirecracker, applyFileChangesToDocker]);
-
-  // Execute bash commands in WebContainer when they arrive
-  // Server-side runtimes (Docker, Sprite, Droplet, Firecracker) handle bash
-  // execution within the generateResponse agent loop — no client-side needed.
-  useEffect(() => {
-    if (!pendingCommand || !sessionId) return;
-
-    const isServerRuntime =
-      runtime === "docker" ||
-      runtime === "firecracker" ||
-      runtime === "flyio-sprite" ||
-      runtime === "digitalocean-droplet";
-
-    if (isServerRuntime) return;
-
-    async function executeCommand() {
-      const cmd = pendingCommand!;
-      try {
-        await markCommandRunning({ bashCommandId: cmd._id });
-        const container = await getWebContainer();
-        const result = await runCommand(container, cmd.command);
-        await markCommandCompleted({
-          bashCommandId: cmd._id,
-          output: result.output,
-          exitCode: result.exitCode,
-        });
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
-        console.error("Failed to execute bash command:", err);
-        await markCommandFailed({
-          bashCommandId: cmd._id,
-          error: errorMsg,
-        }).catch(() => {});
-      }
-    }
-
-    executeCommand();
-  }, [pendingCommand, sessionId, markCommandRunning, markCommandCompleted, markCommandFailed, runtime]);
+  }, [latestChange, markFailed, toast, dockerContainer, applyFileChangesToDocker]);
 
   const retryApplyChanges = async (fileChangeId: Id<"fileChanges">) => {
     try {
@@ -395,11 +248,7 @@ export function ChatPanel({
         content: trimmed || "(image attached)",
         ...(imageIds && imageIds.length > 0 ? { imageIds } : {}),
       });
-      if (runtime === "docker") {
-        await generateResponseViaCli({ sessionId: currentSessionId });
-      } else {
-        await generateResponse({ sessionId: currentSessionId });
-      }
+      await generateResponseViaCli({ sessionId: currentSessionId });
     } catch (err) {
       toast({
         type: "error",
@@ -479,7 +328,7 @@ export function ChatPanel({
         onRenameSession={handleRenameSession}
       />
       {prUrl && (
-        <div className="flex items-center gap-2 border-b border-paper-800 px-3 py-1.5 dark:border-paper-400">
+        <div className="flex items-center justify-end gap-2 border-b border-paper-800 px-3 py-1.5 dark:border-paper-400">
           <a
             href={prUrl}
             target="_blank"

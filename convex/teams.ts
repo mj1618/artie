@@ -1,6 +1,6 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId } from "./auth";
 
 export const listMyTeams = query({
   args: {},
@@ -53,11 +53,11 @@ export const listMembers = query({
       .collect();
     const resolved = await Promise.all(
       members.map(async (m) => {
-        const user = await ctx.db
-          .query("users")
-          .filter((q) => q.eq(q.field("_id"), m.userId))
+        const profile = await ctx.db
+          .query("userProfiles")
+          .withIndex("by_userId", (q) => q.eq("userId", m.userId))
           .unique();
-        return { ...m, name: user?.name, email: user?.email };
+        return { ...m, name: profile?.displayName, email: profile?.email };
       }),
     );
     return resolved;
@@ -132,14 +132,10 @@ export const cancelInvite = mutation({
 export const listMyInvites = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
 
-    const user = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("_id"), userId))
-      .unique();
-    const email = user?.email;
+    const email = identity.email;
     if (!email) return [];
 
     const invites = await ctx.db
@@ -177,11 +173,8 @@ export const acceptInvite = mutation({
       throw new Error("Invite has expired");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("_id"), userId))
-      .unique();
-    if (!user || user.email !== invite.email) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || identity.email !== invite.email) {
       throw new Error("This invite is for a different email address");
     }
 
@@ -219,11 +212,8 @@ export const declineInvite = mutation({
     const invite = await ctx.db.get("invites", args.inviteId);
     if (!invite) throw new Error("Invite not found");
 
-    const user = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("_id"), userId))
-      .unique();
-    if (!user || user.email !== invite.email) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || identity.email !== invite.email) {
       throw new Error("This invite is for a different email address");
     }
 

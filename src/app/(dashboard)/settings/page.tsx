@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useClerk } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import { useToast } from "@/lib/useToast";
@@ -135,7 +135,7 @@ function SettingsContent() {
   const user = useQuery(api.users.currentUser);
   const profile = useQuery(api.users.getProfile);
   const updateProfile = useMutation(api.users.updateProfile);
-  const { signOut } = useAuthActions();
+  const { signOut } = useClerk();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState("");
@@ -170,8 +170,7 @@ function SettingsContent() {
   }
 
   async function handleSignOut() {
-    await signOut();
-    router.push("/login");
+    await signOut({ redirectUrl: "/login" });
   }
 
   if (user === undefined || profile === undefined) {

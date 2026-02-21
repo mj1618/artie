@@ -1,7 +1,9 @@
+import { Cpu } from "lucide-react";
+
 export function TypingIndicator() {
   return (
     <div className="flex flex-col items-start">
-      <span className="mb-1 text-xs text-paper-600">Composure</span>
+      <span className="mb-1 text-xs text-paper-600"><Cpu className="inline h-3 w-3 text-cyan-500" /> Composure</span>
       <div className="mr-auto rounded-lg bg-paper-700 px-3 py-2 dark:bg-paper-300">
         <div className="flex items-center gap-1">
           <span className="h-2 w-2 animate-bounce rounded-full bg-paper-600 dark:bg-paper-500" style={{ animationDelay: "0ms" }} />

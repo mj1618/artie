@@ -21,7 +21,6 @@ export default function RepoSettingsPage() {
     null,
   );
   const [defaultBranch, setDefaultBranch] = useState<string | null>(null);
-  const [runtime, setRuntime] = useState<"webcontainer" | "flyio-sprite" | "sandpack" | "digitalocean-droplet" | "firecracker" | "docker" | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showDisconnect, setShowDisconnect] = useState(false);
@@ -59,11 +58,9 @@ export default function RepoSettingsPage() {
   const isOwner = repo.myRole === "owner";
   const currentPushStrategy = pushStrategy ?? repo.pushStrategy;
   const currentDefaultBranch = defaultBranch ?? repo.defaultBranch;
-  const currentRuntime = runtime ?? repo.runtime ?? "webcontainer";
   const hasChanges =
     currentPushStrategy !== repo.pushStrategy ||
-    currentDefaultBranch !== repo.defaultBranch ||
-    currentRuntime !== (repo.runtime ?? "webcontainer");
+    currentDefaultBranch !== repo.defaultBranch;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -75,11 +72,9 @@ export default function RepoSettingsPage() {
         repoId,
         pushStrategy: currentPushStrategy,
         defaultBranch: currentDefaultBranch,
-        runtime: currentRuntime,
       });
       setPushStrategy(null);
       setDefaultBranch(null);
-      setRuntime(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       toast({ type: "success", message: "Settings saved" });
@@ -301,15 +296,7 @@ export default function RepoSettingsPage() {
             <div className="flex items-center justify-between px-4 py-3">
               <dt className="text-sm text-paper-600">Runtime</dt>
               <dd className="text-sm font-medium text-paper-800">
-                {(repo.runtime ?? "webcontainer") === "webcontainer"
-                  ? "WebContainer (browser)"
-                  : (repo.runtime ?? "webcontainer") === "sandpack"
-                    ? "Sandpack (browser)"
-                    : (repo.runtime ?? "webcontainer") === "digitalocean-droplet"
-                      ? "DigitalOcean Droplet (server)"
-                      : (repo.runtime ?? "webcontainer") === "firecracker"
-                        ? "Firecracker VM (server)"
-                        : "Fly.io Sprite (server)"}
+                Docker Container (server)
               </dd>
             </div>
           </dl>
@@ -348,83 +335,6 @@ export default function RepoSettingsPage() {
                       className="accent-paper-700"
                     />
                     Create PR
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-paper-700">
-                  Runtime Environment
-                </label>
-                <p className="mt-0.5 text-xs text-paper-500">
-                  Choose how code is executed for live previews
-                </p>
-                <div className="mt-2 flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-sm text-paper-700">
-                    <input
-                      type="radio"
-                      name="runtime"
-                      value="webcontainer"
-                      checked={currentRuntime === "webcontainer"}
-                      onChange={() => setRuntime("webcontainer")}
-                      className="accent-paper-700"
-                    />
-                    WebContainer (browser)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-paper-700">
-                    <input
-                      type="radio"
-                      name="runtime"
-                      value="sandpack"
-                      checked={currentRuntime === "sandpack"}
-                      onChange={() => setRuntime("sandpack")}
-                      className="accent-paper-700"
-                    />
-                    Sandpack (browser)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-paper-700">
-                    <input
-                      type="radio"
-                      name="runtime"
-                      value="flyio-sprite"
-                      checked={currentRuntime === "flyio-sprite"}
-                      onChange={() => setRuntime("flyio-sprite")}
-                      className="accent-paper-700"
-                    />
-                    Fly.io Sprite (server)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-paper-700">
-                    <input
-                      type="radio"
-                      name="runtime"
-                      value="digitalocean-droplet"
-                      checked={currentRuntime === "digitalocean-droplet"}
-                      onChange={() => setRuntime("digitalocean-droplet")}
-                      className="accent-paper-700"
-                    />
-                    DigitalOcean Droplet (server)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-paper-700">
-                    <input
-                      type="radio"
-                      name="runtime"
-                      value="firecracker"
-                      checked={currentRuntime === "firecracker"}
-                      onChange={() => setRuntime("firecracker")}
-                      className="accent-paper-700"
-                    />
-                    Firecracker VM (server)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-paper-700">
-                    <input
-                      type="radio"
-                      name="runtime"
-                      value="docker"
-                      checked={currentRuntime === "docker"}
-                      onChange={() => setRuntime("docker")}
-                      className="accent-paper-700"
-                    />
-                    Docker (server)
                   </label>
                 </div>
               </div>
@@ -513,14 +423,6 @@ export default function RepoSettingsPage() {
               </div>
             ) : (
               <form onSubmit={handleConnectConvex} className="p-4">
-                {(currentRuntime === "webcontainer" || currentRuntime === "sandpack") && (
-                  <div className="mb-4 rounded-md border border-amber-800/50 bg-amber-900/20 px-3 py-2">
-                    <p className="text-xs text-amber-400">
-                      External Convex requires a server runtime. Switch to Fly.io
-                      Sprite or DigitalOcean Droplet in the Configuration section above first.
-                    </p>
-                  </div>
-                )}
                 <div className="space-y-3">
                   <div>
                     <label
@@ -563,9 +465,7 @@ export default function RepoSettingsPage() {
                     disabled={
                       connectingConvex ||
                       !externalConvexUrl.trim() ||
-                      !externalConvexDeployment.trim() ||
-                      currentRuntime === "webcontainer" ||
-                      currentRuntime === "sandpack"
+                      !externalConvexDeployment.trim()
                     }
                     className="rounded-md bg-paper-700 px-3 py-1.5 text-sm font-medium text-paper-50 hover:bg-paper-300 disabled:opacity-50"
                   >
@@ -573,8 +473,7 @@ export default function RepoSettingsPage() {
                   </button>
                 </div>
                 <p className="mt-3 text-xs text-paper-500">
-                  Requires a server runtime (Fly.io Sprite or DigitalOcean Droplet). Browser-based runtimes
-                  (WebContainer, Sandpack) do not support external Convex connections.
+                  Connect your Convex deployment to enable full-stack development with a persistent backend.
                 </p>
               </form>
             )}
@@ -589,8 +488,7 @@ export default function RepoSettingsPage() {
             Environment Variables
           </h2>
           <p className="mt-1 text-sm text-paper-500">
-            Configure environment variables that will be injected into the runtime
-            environment. These are used for server-side runtimes (Firecracker, DigitalOcean, Fly.io).
+            Configure environment variables that will be injected into the Docker container runtime.
           </p>
           <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
             <form onSubmit={handleSaveEnvVars} className="p-4">

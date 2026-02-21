@@ -231,6 +231,23 @@ Leave some headroom for the host OS (~1-2GB).
 - **Consistent environment**: All branches start from same base
 - **Efficient storage**: Docker layer caching minimizes disk usage
 
+## Shared pnpm Store
+
+All containers share a global pnpm content-addressable store, similar to the Firecracker NFS shared pnpm cache.
+
+### How It Works
+
+1. Host directory `/opt/docker-manager/pnpm-store` is bind-mounted into every container at `/pnpm-store`
+2. The base image configures `pnpm config set store-dir /pnpm-store`
+3. When any container installs a package, it's stored in the shared store
+4. Subsequent containers hard-link from the store instead of downloading
+
+### Benefits
+
+- **Dramatically faster installs**: After the first install of any package across any repo, it's a local hard-link
+- **Reduced network**: Packages only download once across all repos
+- **Disk efficiency**: Content-addressable store deduplicates across all repos
+
 ## Shared node_modules Volume
 
 ### How It Works
@@ -269,6 +286,60 @@ All containers share a local bare repository cache.
 2. **Subsequent clones**: Clone from local cache (10x faster)
 3. **Auto-update**: `git fetch` before each clone
 
+## CRIU Checkpoint/Restore
+
+Docker containers can be checkpointed using CRIU (Checkpoint/Restore in Userspace) to dramatically speed up provisioning for returning repositories. After dependencies are installed, we checkpoint the container state. Future requests for the same repo restore from the checkpoint instead of repeating clone + install.
+
+### Performance Comparison
+
+| Scenario | Time |
+|----------|------|
+| Fresh container (no checkpoint) | ~20-160s (clone + install + start) |
+| Restored from checkpoint | ~5-15s (restore + git pull + start dev server) |
+
+### How It Works
+
+1. **First request for repo X**: Normal flow (clone, install, checkpoint, start)
+2. **After install**: CRIU checkpoint created (`--leave-running` so the current session isn't interrupted)
+3. **Subsequent requests for repo X**: Restore from checkpoint, pull latest changes, start dev server
+
+### Requirements
+
+- Docker daemon with `--experimental` flag enabled
+- `criu` package installed on the host
+- Sufficient disk space for checkpoint data
+
+### Checkpoint Storage
+
+```
+/opt/docker-manager/checkpoints/
+└── cp-owner-repo-branch/     # CRIU checkpoint files
+```
+
+### API Endpoints
+
+```bash
+# Create checkpoint from running container
+curl -X POST http://<HOST_IP>:8080/api/containers/<id>/checkpoint \
+  -H "Authorization: Bearer $API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"checkpointName": "cp-owner-repo-main"}'
+
+# Restore container from checkpoint
+curl -X POST http://<HOST_IP>:8080/api/checkpoints/<name>/restore \
+  -H "Authorization: Bearer $API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"containerName": "my-container", "ports": [3000]}'
+
+# List checkpoints
+curl http://<HOST_IP>:8080/api/checkpoints \
+  -H "Authorization: Bearer $API_SECRET"
+
+# Delete checkpoint
+curl -X DELETE http://<HOST_IP>:8080/api/checkpoints/<name> \
+  -H "Authorization: Bearer $API_SECRET"
+```
+
 ## Directory Structure on Host
 
 ```
@@ -277,6 +348,8 @@ All containers share a local bare repository cache.
 │   ├── server.js          # Express API
 │   └── package.json
 ├── repo-cache/            # Shared git cache (bare repos)
+├── pnpm-store/            # Shared pnpm content-addressable store
+├── checkpoints/           # CRIU container checkpoints
 ├── logs/                  # Container logs
 └── .env                   # API_SECRET
 ```

@@ -7,7 +7,7 @@ import {
   ActionCtx,
 } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId } from "./auth";
 import { Doc } from "./_generated/dataModel";
 import { internal, api } from "./_generated/api";
 
@@ -240,6 +240,16 @@ export const getByIdInternal = internalQuery({
   args: { containerId: v.id("dockerContainers") },
   handler: async (ctx, args) => {
     return await ctx.db.get("dockerContainers", args.containerId);
+  },
+});
+
+export const getByContainerId = internalQuery({
+  args: { containerId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("dockerContainers")
+      .withIndex("by_containerId", (q) => q.eq("containerId", args.containerId))
+      .first();
   },
 });
 
@@ -644,22 +654,31 @@ export const request = mutation({
 
     const apiSecret = generateApiSecret();
 
-    // Check if a cached repo image exists - if so, skip pool
-    // Pool containers lack repo-specific node_modules volumes, making installs slower
-    // for repos that have been set up before. Direct creation with volume is faster.
+    // Check if a cached repo image exists
     const repoImage = await ctx.db
       .query("dockerRepoImages")
       .withIndex("by_repoId", (q) => q.eq("repoId", session.repoId))
       .filter((q) => q.eq(q.field("status"), "ready"))
       .first();
 
-    // Only use pool for repos without a cached image (first-time setup)
-    const poolContainer = repoImage
-      ? null
-      : await ctx.db
+    // Try repo-specific pool first (has image + node_modules volume pre-attached)
+    const repoPoolContainer = repoImage
+      ? await ctx.db
+          .query("dockerContainerPool")
+          .withIndex("by_status_repoId", (q) =>
+            q.eq("status", "ready").eq("repoId", session.repoId)
+          )
+          .order("asc")
+          .first()
+      : null;
+
+    // Fall back to generic pool
+    const poolContainer = repoPoolContainer
+      ?? await ctx.db
           .query("dockerContainerPool")
           .withIndex("by_status", (q) => q.eq("status", "ready"))
           .order("asc")
+          .filter((q) => q.eq(q.field("repoId"), undefined))
           .first();
 
     if (poolContainer) {
@@ -685,12 +704,12 @@ export const request = mutation({
         createdAt: now,
         statusChangedAt: now,
         statusHistory: [
-          { status: "cloning", timestamp: now, reason: "assigned_from_pool" },
+          { status: "cloning", timestamp: now, reason: poolContainer.repoId ? "assigned_from_repo_pool" : "assigned_from_pool" },
         ],
         branch: targetBranch,
       });
 
-      console.log(`[dockerContainers:request] Assigned pool container ${poolContainer.containerName} to session`);
+      console.log(`[dockerContainers:request] Assigned ${poolContainer.repoId ? "repo" : "generic"} pool container ${poolContainer.containerName} to session`);
 
       await ctx.scheduler.runAfter(0, internal.dockerContainers.setupContainer, {
         containerId,
@@ -1129,12 +1148,60 @@ export const createContainer = internalAction({
       });
     }
 
+    // Check for a CRIU checkpoint (fastest path — restore pre-installed container)
+    const checkpoint = await ctx.runQuery(internal.dockerCheckpoints.getCheckpoint, {
+      repoId: container.repoId,
+      branch: resolvedBranch,
+    });
+
+    const hostUrl = process.env.DOCKER_HOST_URL || DOCKER_HOST;
+
+    if (checkpoint) {
+      console.log(`[createContainer] Found checkpoint ${checkpoint.checkpointName}, attempting restore`);
+      const volumeName = `${repo.githubOwner}-${repo.githubRepo}-node_modules`;
+      const restoreResult = await ctx.runAction(internal.dockerCheckpoints.restoreFromCheckpoint, {
+        checkpointName: checkpoint.checkpointName,
+        containerName: container.containerName,
+        volumeName,
+      });
+
+      if (restoreResult.success) {
+        const data = restoreResult.data;
+        const dockerHostUrl = process.env.DOCKER_HOST_URL!;
+        const dockerWsUrl = dockerHostUrl.replace(/^http/, "ws");
+
+        await ctx.runMutation(internal.dockerContainers.updateStatus, {
+          containerId: args.containerId,
+          status: "starting",
+          updates: {
+            containerId: data.id,
+            hostPort: data.hostPort,
+            previewUrl: `http://${process.env.DOCKER_HOST!}:${data.hostPort}`,
+            logsUrl: `${dockerHostUrl}/api/containers/${data.id}/logs`,
+            terminalUrl: `${dockerWsUrl}/api/containers/${data.id}/terminal`,
+          },
+          reason: "restored_from_checkpoint",
+        });
+
+        await ctx.runMutation(internal.dockerCheckpoints.recordCheckpointUsage, {
+          checkpointId: checkpoint._id,
+        });
+
+        // Container is restored with deps installed — just start the dev server
+        await ctx.scheduler.runAfter(0, internal.dockerContainers.startDevServer, {
+          containerId: args.containerId,
+        });
+        return;
+      }
+
+      console.warn(`[createContainer] Checkpoint restore failed: ${restoreResult.error}, falling back to normal flow`);
+    }
+
     // Check if a main image exists for this repo
     const repoImage = await ctx.runQuery(internal.dockerContainers.getRepoImage, {
       repoId: container.repoId,
     });
 
-    const hostUrl = process.env.DOCKER_HOST_URL || DOCKER_HOST;
     const baseImage = repoImage?.imageTag || "node:24-slim-git";
 
     try {
@@ -1326,6 +1393,101 @@ export const createContainer = internalAction({
         status: "unhealthy",
         updates: { errorMessage: `Create container error: ${message}` },
         reason: "create_error",
+      });
+    }
+  },
+});
+
+// Start dev server on a restored container (post-checkpoint-restore path)
+export const startDevServer = internalAction({
+  args: { containerId: v.id("dockerContainers") },
+  handler: async (ctx, args) => {
+    console.log(`[startDevServer] Starting for container ${args.containerId}`);
+
+    const container = await ctx.runQuery(internal.dockerContainers.getByIdInternal, {
+      containerId: args.containerId,
+    });
+    if (!container || !container.containerId) {
+      console.error(`[startDevServer] Container ${args.containerId} not found or no host container ID`);
+      return;
+    }
+
+    const [repo, githubTokenResult] = await Promise.all([
+      ctx.runQuery(api.projects.get, { repoId: container.repoId }),
+      getUserGithubTokenById(ctx, container.userId).catch((err: unknown) => {
+        return { error: err instanceof Error ? err.message : "GitHub token error" } as const;
+      }),
+    ]);
+
+    if (!repo) {
+      await ctx.runMutation(internal.dockerContainers.updateStatus, {
+        containerId: args.containerId,
+        status: "unhealthy",
+        updates: { errorMessage: "Repository not found" },
+        reason: "repo_not_found",
+      });
+      return;
+    }
+
+    const githubToken = (typeof githubTokenResult === "object" && githubTokenResult && "error" in githubTokenResult)
+      ? undefined
+      : githubTokenResult as string | undefined;
+
+    const team = await ctx.runQuery(internal.teams.getTeamInternal, { teamId: repo.teamId });
+    const anthropicApiKey =
+      (team?.llmProvider === "anthropic" && team?.llmApiKey) ? team.llmApiKey
+      : process.env.CLAUDE_API_KEY || "";
+
+    const apiSecret = process.env.DOCKER_API_SECRET;
+    const hostUrl = process.env.DOCKER_HOST_URL || DOCKER_HOST;
+    const callbackUrl = process.env.CONVEX_SITE_URL + "/docker-status";
+
+    try {
+      const envVars: Record<string, string> = {
+        ...(repo.envVars?.reduce((acc: Record<string, string>, { key, value }: { key: string; value: string }) => ({ ...acc, [key]: value }), {}) ?? {}),
+        ...(repo.externalConvexUrl ? { NEXT_PUBLIC_CONVEX_URL: repo.externalConvexUrl } : {}),
+        ...(repo.externalConvexDeployment ? { CONVEX_DEPLOYMENT: repo.externalConvexDeployment } : {}),
+        ...(anthropicApiKey ? { ANTHROPIC_API_KEY: anthropicApiKey } : {}),
+      };
+
+      const setupResponse = await fetch(`${hostUrl}/api/containers/${container.containerId}/setup`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiSecret}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repo: `${repo.githubOwner}/${repo.githubRepo}`,
+          branch: container.branch || repo.defaultBranch,
+          defaultBranch: repo.defaultBranch,
+          githubToken,
+          callbackUrl,
+          callbackSecret: container.apiSecret,
+          hasMainImage: true,
+          buildMainImage: false,
+          envVars,
+          restoredFromCheckpoint: true,
+        }),
+      });
+
+      if (!setupResponse.ok) {
+        const error = await setupResponse.text();
+        console.error(`[startDevServer] Setup failed: ${error}`);
+        await ctx.runMutation(internal.dockerContainers.updateStatus, {
+          containerId: args.containerId,
+          status: "unhealthy",
+          updates: { errorMessage: `Dev server start failed: ${error}` },
+          reason: "dev_server_start_failed",
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[startDevServer] Error: ${message}`);
+      await ctx.runMutation(internal.dockerContainers.updateStatus, {
+        containerId: args.containerId,
+        status: "unhealthy",
+        updates: { errorMessage: `Dev server start error: ${message}` },
+        reason: "dev_server_error",
       });
     }
   },

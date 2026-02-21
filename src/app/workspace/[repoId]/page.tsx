@@ -165,16 +165,6 @@ export default function WorkspacePage() {
   );
 }
 
-// Helper to get/set runtime cookie
-function getRuntimeCookie(): string | null {
-  const match = document.cookie.match(/(?:^|; )runtime=([^;]*)/);
-  return match ? match[1] : null;
-}
-
-function setRuntimeCookie(runtime: string) {
-  document.cookie = `runtime=${runtime}; path=/; max-age=31536000; SameSite=Lax`;
-}
-
 function WorkspacePageInner() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const router = useRouter();
@@ -185,7 +175,6 @@ function WorkspacePageInner() {
   const [sessionId, setSessionId] = useState<Id<"sessions"> | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [showNewFeatureDialog, setShowNewFeatureDialog] = useState(false);
-  const [runtimeReady, setRuntimeReady] = useState(false);
   const [pendingBranchInfo, setPendingBranchInfo] = useState<{
     branchName: string;
     featureName: string;
@@ -202,34 +191,6 @@ function WorkspacePageInner() {
     api.sessions.listByRepo,
     isAuthenticated ? { repoId } : "skip",
   );
-
-  // Handle runtime cookie and COEP headers
-  // WebContainer needs COEP, Sandpack doesn't work with COEP
-  useEffect(() => {
-    if (!repo) return;
-    
-    const desiredRuntime = repo.runtime ?? "webcontainer";
-    const currentCookie = getRuntimeCookie();
-    
-    // If we need webcontainer but don't have crossOriginIsolated, we need a hard reload
-    // This handles client-side navigation from pages without COEP headers
-    if (desiredRuntime === "webcontainer" && !self.crossOriginIsolated) {
-      // Make sure cookie is set before reload
-      if (currentCookie !== desiredRuntime) {
-        setRuntimeCookie(desiredRuntime);
-      }
-      // Hard reload to get COEP headers from middleware
-      window.location.reload();
-      return;
-    }
-    
-    // Update cookie if needed (e.g., switching runtimes)
-    if (currentCookie !== desiredRuntime) {
-      setRuntimeCookie(desiredRuntime);
-    }
-    
-    setRuntimeReady(true);
-  }, [repo]);
 
   // Default to the URL session param, or the most recent session on first load
   useEffect(() => {
@@ -305,7 +266,7 @@ function WorkspacePageInner() {
     return null;
   }
 
-  if (repo === undefined || sessions === undefined || !runtimeReady) {
+  if (repo === undefined || sessions === undefined) {
     return (
       <div className="flex h-screen items-center justify-center bg-paper-100">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-paper-400 border-t-white" />
@@ -314,8 +275,6 @@ function WorkspacePageInner() {
   }
 
   if (repo === null) notFound();
-
-  const runtime = repo.runtime ?? "webcontainer";
 
   return (
     <div className="flex h-screen flex-col">
@@ -339,7 +298,6 @@ function WorkspacePageInner() {
             repoId={repoId}
             sessionId={sessionId}
             branch={activeSession?.branchName}
-            runtime={runtime}
           />
         }
       />

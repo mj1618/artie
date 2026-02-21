@@ -1,12 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
-  ...authTables,
   userProfiles: defineTable({
     userId: v.string(),
     displayName: v.string(),
+    email: v.optional(v.string()),
     githubAccessToken: v.optional(v.string()),
     githubRefreshToken: v.optional(v.string()),
     githubTokenExpiresAt: v.optional(v.number()),
@@ -63,7 +62,7 @@ export default defineSchema({
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
     connectedBy: v.string(),
     connectedAt: v.number(),
-    runtime: v.optional(v.union(v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"), v.literal("docker"))),
+    runtime: v.optional(v.union(v.literal("docker"), v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"))),
     hasConvex: v.optional(v.boolean()),
     projectType: v.optional(v.string()),
     externalConvexUrl: v.optional(v.string()),
@@ -176,258 +175,6 @@ export default defineSchema({
     .index("by_teamId", ["teamId"])
     .index("by_userId", ["userId"]),
 
-  // Fly.io Sprites - ephemeral Fly.io apps for server-side previews
-  flyioSprites: defineTable({
-    sessionId: v.id("sessions"),
-    repoId: v.id("repos"),
-    userId: v.string(),
-    // Fly.io app name (unique identifier)
-    appName: v.string(),
-    // App status
-    status: v.union(
-      v.literal("provisioning"),
-      v.literal("deploying"),
-      v.literal("running"),
-      v.literal("stopping"),
-      v.literal("stopped"),
-      v.literal("error")
-    ),
-    // Public URL for the preview
-    previewUrl: v.optional(v.string()),
-    // Internal API URL for file operations (e.g., http://[app].internal:3001)
-    apiUrl: v.optional(v.string()),
-    // Secret for API authentication
-    apiSecret: v.optional(v.string()),
-    // Clone status: tracks whether the repo has been cloned and deps installed
-    cloneStatus: v.optional(
-      v.union(
-        v.literal("pending"),
-        v.literal("cloning"),
-        v.literal("installing"),
-        v.literal("ready"),
-        v.literal("failed")
-      )
-    ),
-    // Fly.io machine ID
-    machineId: v.optional(v.string()),
-    // Error message if status is error
-    errorMessage: v.optional(v.string()),
-    // Git branch being previewed
-    branch: v.optional(v.string()),
-    // Timestamps
-    createdAt: v.number(),
-    lastActiveAt: v.number(),
-    stoppedAt: v.optional(v.number()),
-  })
-    .index("by_sessionId", ["sessionId"])
-    .index("by_repoId", ["repoId"])
-    .index("by_appName", ["appName"])
-    .index("by_status", ["status"]),
-
-  // DigitalOcean Droplets - ephemeral VMs for server-side previews
-  // More rigorous state management than Fly.io sprites
-  droplets: defineTable({
-    // Identifiers
-    sessionId: v.id("sessions"),
-    repoId: v.id("repos"),
-    teamId: v.id("teams"),
-    userId: v.string(),
-
-    // DigitalOcean metadata
-    dropletId: v.optional(v.string()), // DO droplet ID
-    dropletName: v.string(), // Unique name
-    ipv4Address: v.optional(v.string()),
-    region: v.string(),
-    size: v.string(),
-
-    // Single unified status field (state machine)
-    status: v.union(
-      v.literal("requested"), // DB record created, waiting for scheduler
-      v.literal("creating"), // DO API call in progress
-      v.literal("create_failed"), // DO API failed (will retry)
-      v.literal("provisioning"), // Droplet created, waiting for active
-      v.literal("booting"), // Droplet active, container starting
-      v.literal("cloning"), // Cloning repository
-      v.literal("installing"), // Installing dependencies
-      v.literal("ready"), // Ready but no recent heartbeat
-      v.literal("active"), // Ready with recent heartbeat
-      v.literal("stopping"), // Stop requested
-      v.literal("destroying"), // DO deletion in progress
-      v.literal("destroyed"), // Fully cleaned up
-      v.literal("unhealthy") // Health check failed, pending cleanup
-    ),
-
-    // URLs & auth
-    previewUrl: v.optional(v.string()),
-    apiUrl: v.optional(v.string()),
-    apiSecret: v.string(), // Use crypto.randomUUID()
-
-    // Error handling
-    errorMessage: v.optional(v.string()),
-    retryCount: v.number(),
-    lastRetryAt: v.optional(v.number()),
-
-    // Timestamps for lifecycle management
-    createdAt: v.number(),
-    statusChangedAt: v.number(), // When status last changed
-    lastHeartbeatAt: v.optional(v.number()),
-    lastHealthCheckAt: v.optional(v.number()),
-    destroyedAt: v.optional(v.number()),
-
-    // Audit trail
-    statusHistory: v.array(
-      v.object({
-        status: v.string(),
-        timestamp: v.number(),
-        reason: v.optional(v.string()),
-      })
-    ),
-
-    // Repository context
-    branch: v.optional(v.string()),
-    commitSha: v.optional(v.string()),
-  })
-    .index("by_sessionId", ["sessionId"])
-    .index("by_repoId", ["repoId"])
-    .index("by_repoId_branch", ["repoId", "branch"])
-    .index("by_teamId", ["teamId"])
-    .index("by_dropletId", ["dropletId"])
-    .index("by_dropletName", ["dropletName"])
-    .index("by_status", ["status"])
-    .index("by_status_and_statusChangedAt", ["status", "statusChangedAt"]),
-
-  // Droplet quotas per team
-  dropletQuotas: defineTable({
-    teamId: v.id("teams"),
-    maxDroplets: v.number(), // Default: 5
-    currentActive: v.number(),
-    lastUpdatedAt: v.number(),
-  }).index("by_teamId", ["teamId"]),
-
-  // Firecracker VMs - fast-booting microVMs for server-side previews
-  firecrackerVms: defineTable({
-    // Identifiers
-    sessionId: v.id("sessions"),
-    repoId: v.id("repos"),
-    teamId: v.id("teams"),
-    userId: v.string(),
-
-    // VM metadata (assigned by host API)
-    vmId: v.optional(v.string()),
-    vmName: v.string(),
-    vmIp: v.optional(v.string()),
-
-    // Port mapping (from host API response)
-    hostPort: v.optional(v.number()),
-
-    // Constructed URLs
-    previewUrl: v.optional(v.string()),
-    logsUrl: v.optional(v.string()),
-    terminalUrl: v.optional(v.string()),
-
-    // State machine
-    status: v.union(
-      v.literal("requested"),
-      v.literal("creating"),
-      v.literal("booting"),
-      v.literal("cloning"),
-      v.literal("installing"),
-      v.literal("starting"),
-      v.literal("ready"),
-      v.literal("active"),
-      v.literal("stopping"),
-      v.literal("destroying"),
-      v.literal("destroyed"),
-      v.literal("unhealthy")
-    ),
-
-    // Authentication
-    apiSecret: v.string(),
-
-    // Error handling
-    errorMessage: v.optional(v.string()),
-    retryCount: v.number(),
-    lastRetryAt: v.optional(v.number()),
-
-    // Timestamps
-    createdAt: v.number(),
-    statusChangedAt: v.number(),
-    lastHeartbeatAt: v.optional(v.number()),
-    destroyedAt: v.optional(v.number()),
-
-    // Audit trail
-    statusHistory: v.array(v.object({
-      status: v.string(),
-      timestamp: v.number(),
-      reason: v.optional(v.string()),
-    })),
-
-    // Repository context
-    branch: v.optional(v.string()),
-  })
-    .index("by_sessionId", ["sessionId"])
-    .index("by_repoId", ["repoId"])
-    .index("by_repoId_branch", ["repoId", "branch"])
-    .index("by_teamId", ["teamId"])
-    .index("by_vmId", ["vmId"])
-    .index("by_vmName", ["vmName"])
-    .index("by_status", ["status"])
-    .index("by_status_and_statusChangedAt", ["status", "statusChangedAt"]),
-
-  // Per-repository VM snapshots for faster subsequent provisioning
-  // After initial clone + install, we snapshot the VM state
-  // Future VMs for the same repo can restore from snapshot instead of full setup
-  repoSnapshots: defineTable({
-    repoId: v.id("repos"),
-    branch: v.string(),
-    commitSha: v.string(),
-    createdAt: v.number(),
-    createdBy: v.string(),
-    sizeBytes: v.number(),
-    status: v.union(
-      v.literal("creating"),
-      v.literal("ready"),
-      v.literal("failed"),
-      v.literal("expired")
-    ),
-    errorMessage: v.optional(v.string()),
-    lastUsedAt: v.optional(v.number()),
-    useCount: v.number(),
-  })
-    .index("by_repoId", ["repoId"])
-    .index("by_repoId_branch", ["repoId", "branch"])
-    .index("by_status", ["status"]),
-
-  // Pre-warmed VM pool for instant provisioning
-  // Pool VMs are created in advance and assigned to sessions on-demand
-  firecrackerVmPool: defineTable({
-    // Host VM metadata (assigned by host API when created)
-    vmId: v.string(),
-    vmName: v.string(),
-    vmIp: v.string(),
-    hostPort: v.number(),
-
-    // Pool status
-    status: v.union(
-      v.literal("creating"),     // Being created on host
-      v.literal("ready"),        // Booted and waiting for assignment
-      v.literal("assigned"),     // Assigned to a session (transitioning to firecrackerVms)
-      v.literal("failed"),       // Creation failed
-      v.literal("destroying")    // Being cleaned up
-    ),
-
-    // Timestamps
-    createdAt: v.number(),
-    readyAt: v.optional(v.number()),
-    assignedAt: v.optional(v.number()),
-
-    // Error info
-    errorMessage: v.optional(v.string()),
-  })
-    .index("by_status", ["status"])
-    .index("by_vmId", ["vmId"])
-    .index("by_vmName", ["vmName"]),
-
   // Docker Containers - containers running on DigitalOcean Docker host
   dockerContainers: defineTable({
     // Identifiers
@@ -513,6 +260,10 @@ export default defineSchema({
       v.literal("destroying")
     ),
 
+    // Repo-specific pool containers (optional - generic pool has no repoId)
+    repoId: v.optional(v.id("repos")),
+    imageTag: v.optional(v.string()),
+
     // Timestamps
     createdAt: v.number(),
     readyAt: v.optional(v.number()),
@@ -522,6 +273,7 @@ export default defineSchema({
     errorMessage: v.optional(v.string()),
   })
     .index("by_status", ["status"])
+    .index("by_status_repoId", ["status", "repoId"])
     .index("by_containerId", ["containerId"])
     .index("by_containerName", ["containerName"]),
 
@@ -546,5 +298,27 @@ export default defineSchema({
     .index("by_repoId", ["repoId"])
     .index("by_repoId_branch", ["repoId", "branch"])
     .index("by_imageTag", ["imageTag"])
+    .index("by_status", ["status"]),
+
+  // Docker container checkpoints (docker commit snapshots) for fast restore
+  dockerCheckpoints: defineTable({
+    repoId: v.id("repos"),
+    branch: v.string(),
+    checkpointName: v.string(),
+    imageTag: v.optional(v.string()),
+    sourceContainerId: v.string(),
+    status: v.union(
+      v.literal("creating"),
+      v.literal("ready"),
+      v.literal("failed"),
+      v.literal("expired")
+    ),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    useCount: v.number(),
+  })
+    .index("by_repoId", ["repoId"])
+    .index("by_repoId_branch", ["repoId", "branch"])
     .index("by_status", ["status"]),
 });
