@@ -13,7 +13,7 @@ export const provisionProject = action({
 
     try {
       // Simulate provisioning delay
-      // In production, this would call Convex API + Fly.io API
+      // In production, this would call Convex API
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Generate placeholder values

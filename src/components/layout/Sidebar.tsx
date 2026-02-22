@@ -143,16 +143,6 @@ export function Sidebar() {
                       >
                         LLM Settings
                       </Link>
-                      <Link
-                        href={`/team/${team._id}/deploy-keys`}
-                        className={`block rounded-md px-3 py-1.5 text-xs transition-colors ${
-                          pathname === `/team/${team._id}/deploy-keys`
-                            ? "bg-paper-50 text-paper-800 ring-1 ring-paper-300"
-                            : "text-paper-500 hover:bg-paper-50/60 hover:text-paper-700"
-                        }`}
-                      >
-                        Deploy Keys
-                      </Link>
                     </div>
                     <TeamRepos teamId={team._id} />
                   </div>

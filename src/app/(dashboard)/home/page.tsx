@@ -695,11 +695,8 @@ function CreateTemplateDialog({
   const [projectName, setProjectName] = useState("");
   const [projectSlug, setProjectSlug] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
-  const [selectedDeployKeyId, setSelectedDeployKeyId] =
-    useState<Id<"flyioDeployKeys"> | null>(null);
   const [creatingProject, setCreatingProject] = useState(false);
 
-  const deployKeys = useQuery(api.deployKeys.listByTeam, { teamId });
   const slugAvailable = useQuery(
     api.templates.checkSlugAvailable,
     projectSlug.length > 0 ? { slug: projectSlug } : "skip",
@@ -718,7 +715,7 @@ function CreateTemplateDialog({
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!projectName.trim() || !projectSlug || !selectedDeployKeyId) return;
+    if (!projectName.trim() || !projectSlug) return;
     setCreatingProject(true);
     try {
       const projectId = await createProject({
@@ -726,7 +723,6 @@ function CreateTemplateDialog({
         name: projectName.trim(),
         slug: projectSlug,
         template: "nextjs-convex",
-        flyioDeployKeyId: selectedDeployKeyId,
       });
       // Fire-and-forget: start provisioning in the background
       provisionProject({ projectId }).catch(console.error);
@@ -817,47 +813,6 @@ function CreateTemplateDialog({
             </div>
           </div>
 
-          {/* Deploy Key Selector */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-paper-700">
-              Fly.io Deploy Key
-            </label>
-            {deployKeys === undefined ? (
-              <div className="rounded-md border border-paper-300 bg-paper-200 px-3 py-2 text-sm text-paper-500">
-                Loading...
-              </div>
-            ) : deployKeys.length === 0 ? (
-              <div className="rounded-md border border-paper-300 bg-paper-200 px-3 py-2 text-sm text-paper-500">
-                No deploy keys.{" "}
-                <Link
-                  href={`/team/${teamId}/deploy-keys`}
-                  className="text-sky hover:underline"
-                >
-                  Add one first
-                </Link>
-              </div>
-            ) : (
-              <select
-                value={selectedDeployKeyId ?? ""}
-                onChange={(e) =>
-                  setSelectedDeployKeyId(
-                    e.target.value
-                      ? (e.target.value as Id<"flyioDeployKeys">)
-                      : null,
-                  )
-                }
-                className="w-full rounded-md border border-paper-300 bg-paper-100 px-3 py-2 text-sm text-paper-900 shadow-paper-sm outline-none transition-shadow focus:border-sepia-light focus:ring-2 focus:ring-sepia-light/20"
-              >
-                <option value="">Select a deploy key...</option>
-                {deployKeys.map((key) => (
-                  <option key={key._id} value={key._id}>
-                    {key.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2">
             <button
@@ -873,7 +828,6 @@ function CreateTemplateDialog({
                 creatingProject ||
                 !projectName.trim() ||
                 !projectSlug ||
-                !selectedDeployKeyId ||
                 slugAvailable === false
               }
               className="rounded-md bg-sepia px-4 py-2 text-sm font-medium text-paper-50 shadow-paper-sm transition-colors hover:bg-sepia-light disabled:opacity-50"

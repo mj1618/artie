@@ -12,7 +12,6 @@ import type * as ai from "../ai.js";
 import type * as auth from "../auth.js";
 import type * as bashCommands from "../bashCommands.js";
 import type * as crons from "../crons.js";
-import type * as deployKeys from "../deployKeys.js";
 import type * as dockerCheckpoints from "../dockerCheckpoints.js";
 import type * as dockerContainers from "../dockerContainers.js";
 import type * as dockerFiles from "../dockerFiles.js";
@@ -40,7 +39,6 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   bashCommands: typeof bashCommands;
   crons: typeof crons;
-  deployKeys: typeof deployKeys;
   dockerCheckpoints: typeof dockerCheckpoints;
   dockerContainers: typeof dockerContainers;
   dockerFiles: typeof dockerFiles;

@@ -62,7 +62,7 @@ export default defineSchema({
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
     connectedBy: v.string(),
     connectedAt: v.number(),
-    runtime: v.optional(v.union(v.literal("docker"), v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"))),
+    runtime: v.optional(v.union(v.literal("docker"), v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"))), // only "docker" is active; others kept for existing DB records
     hasConvex: v.optional(v.boolean()),
     projectType: v.optional(v.string()),
     externalConvexUrl: v.optional(v.string()),
@@ -156,24 +156,11 @@ export default defineSchema({
     convexProjectId: v.string(),
     convexDeploymentUrl: v.string(),
     convexDeployKey: v.string(),
-    flyioAppName: v.string(),
-    flyioDeployKey: v.string(),
     status: v.union(v.literal("provisioning"), v.literal("active"), v.literal("error")),
     errorMessage: v.optional(v.string()),
   })
     .index("by_teamId", ["teamId"])
     .index("by_slug", ["slug"]),
-
-  flyioDeployKeys: defineTable({
-    teamId: v.id("teams"),
-    userId: v.string(),
-    name: v.string(),
-    encryptedKey: v.string(),
-    createdAt: v.number(),
-    lastUsedAt: v.optional(v.number()),
-  })
-    .index("by_teamId", ["teamId"])
-    .index("by_userId", ["userId"]),
 
   // Docker Containers - containers running on DigitalOcean Docker host
   dockerContainers: defineTable({

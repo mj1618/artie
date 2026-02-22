@@ -1011,7 +1011,7 @@ Your friendly explanation here
 
           // 6e. If no bash commands or no server-side runtime, we're done
           if (bashCommands.length === 0 || !runtimeInfo) {
-            // Still save non-executed bash commands for client-side WebContainer
+            // Save non-executed bash commands (no runtime available)
             if (bashCommands.length > 0 && !runtimeInfo) {
               await Promise.all(
                 bashCommands.map((command) =>

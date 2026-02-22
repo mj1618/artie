@@ -83,14 +83,6 @@ function CheckIcon({ className }: { className?: string }) {
   );
 }
 
-function KeyIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
-      <path fillRule="evenodd" d="M8 7a5 5 0 1 1 3.61 4.804l-1.903 1.903A1 1 0 0 1 9 14H8v1a1 1 0 0 1-1 1H6v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2a1 1 0 0 1 .293-.707L8.196 8.39A5.002 5.002 0 0 1 8 7Zm5-3a.75.75 0 0 0 0 1.5A1.5 1.5 0 0 1 14.5 7 .75.75 0 0 0 16 7a3 3 0 0 0-3-3Z" clipRule="evenodd" />
-    </svg>
-  );
-}
-
 function SparklesIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
@@ -1068,8 +1060,6 @@ function AddRepoSection({ teamId }: { teamId: Id<"teams"> }) {
 // Settings Tab Components
 function SettingsTab({ teamId }: { teamId: Id<"teams"> }) {
   const llmSettings = useQuery(api.teams.getLlmSettings, { teamId });
-  const deployKeys = useQuery(api.deployKeys.listByTeam, { teamId });
-
   return (
     <div className="space-y-4">
       {/* LLM Settings Card */}
@@ -1133,37 +1123,6 @@ function SettingsTab({ teamId }: { teamId: Id<"teams"> }) {
         </div>
       </div>
 
-      {/* Deploy Keys Card */}
-      <div className="rounded-lg border border-paper-200 bg-paper-50 shadow-paper-sm">
-        <div className="flex items-center justify-between border-b border-paper-200 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky/10">
-              <KeyIcon className="h-5 w-5 text-sky" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-paper-800">Deploy Keys</h3>
-              <p className="text-xs text-paper-500">Fly.io deployment credentials</p>
-            </div>
-          </div>
-          <Link
-            href={`/team/${teamId}/deploy-keys`}
-            className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/5"
-          >
-            Manage
-            <ArrowRightIcon className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-        <div className="px-4 py-3">
-          {deployKeys === undefined ? (
-            <div className="h-4 w-24 animate-pulse rounded bg-paper-200" />
-          ) : (
-            <p className="text-sm text-paper-700">
-              <span className="font-semibold">{deployKeys.length}</span>{" "}
-              {deployKeys.length === 1 ? "key" : "keys"} configured
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

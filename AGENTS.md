@@ -7,11 +7,6 @@ user: matthew.stephen.james@gmail.com
 pass: xt4yArXEXhDjng8R9T7QTpjL8j&@
 
 
-# firecracker
-
-Firecracker VM info is at @swarm/FIRECRACKER.md
-
-
 
 # use @/ for paths
 

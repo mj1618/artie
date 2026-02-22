@@ -139,7 +139,7 @@ export default function TemplateProjectDetailPage() {
       </div>
 
       {/* Deployment Details */}
-      {(project.convexProjectId || project.convexDeploymentUrl || project.flyioAppName) && (
+      {(project.convexProjectId || project.convexDeploymentUrl) && (
         <div className="mt-8">
           <h2 className="text-lg font-semibold text-paper-800">
             Deployment Details
@@ -171,14 +171,6 @@ export default function TemplateProjectDetailPage() {
                   )}
                 </dd>
               </div>
-              {project.flyioAppName && (
-                <div className="flex items-center justify-between px-4 py-3">
-                  <dt className="text-sm text-paper-600">Fly.io App Name</dt>
-                  <dd className="font-mono text-sm text-paper-800">
-                    {project.flyioAppName}
-                  </dd>
-                </div>
-              )}
             </dl>
           </div>
         </div>

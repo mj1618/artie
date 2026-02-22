@@ -45,7 +45,6 @@ export const create = mutation({
     name: v.string(),
     slug: v.string(),
     template: v.literal("nextjs-convex"),
-    flyioDeployKeyId: v.id("flyioDeployKeys"),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -53,12 +52,6 @@ export const create = mutation({
     const team = await ctx.db.get("teams", args.teamId);
     if (!team || team.ownerId !== userId) throw new Error("Not authorized");
 
-    // Verify the deploy key exists and belongs to this team
-    const deployKey = await ctx.db.get("flyioDeployKeys", args.flyioDeployKeyId);
-    if (!deployKey || deployKey.teamId !== args.teamId)
-      throw new Error("Deploy key not found");
-
-    // Check slug uniqueness within our system
     const existingSlug = await ctx.db
       .query("templateProjects")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug.toLowerCase()))
@@ -75,8 +68,6 @@ export const create = mutation({
       convexProjectId: "",
       convexDeploymentUrl: "",
       convexDeployKey: "",
-      flyioAppName: `artie-${args.slug.toLowerCase()}`,
-      flyioDeployKey: deployKey.encryptedKey,
       status: "provisioning",
     });
   },

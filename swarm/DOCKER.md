@@ -4,7 +4,7 @@ This document describes the Docker container host used to run project developmen
 
 ## Overview
 
-Instead of using Firecracker VMs, this runtime uses Docker containers on a single DigitalOcean droplet. Containers share resources efficiently and leverage prebuilt images for fast startup times.
+Docker containers run on a single DigitalOcean droplet. Containers share resources efficiently and leverage prebuilt images for fast startup times.
 
 ## Key Features
 
@@ -15,7 +15,7 @@ Instead of using Firecracker VMs, this runtime uses Docker containers on a singl
 
 ## Container Pool (Instant Provisioning)
 
-Similar to Firecracker, we maintain a pool of pre-warmed containers.
+We maintain a pool of pre-warmed containers.
 
 ### How It Works
 
@@ -233,7 +233,7 @@ Leave some headroom for the host OS (~1-2GB).
 
 ## Shared pnpm Store
 
-All containers share a global pnpm content-addressable store, similar to the Firecracker NFS shared pnpm cache.
+All containers share a global pnpm content-addressable store.
 
 ### How It Works
 
@@ -403,15 +403,6 @@ DOCKER_API_SECRET=<random_64_char_hex>
 2. Convex backend calls Docker host API
 3. Host manages container lifecycle
 4. Status updates flow via HTTP callbacks
-
-## Cost Comparison
-
-| Approach | Cost for 10 concurrent projects |
-|----------|--------------------------------|
-| Firecracker (s-8vcpu-16gb) | $96/month |
-| Docker (s-8vcpu-16gb) | $96/month |
-
-Docker has similar cost but simpler setup and broader compatibility.
 
 ## Troubleshooting
 

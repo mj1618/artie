@@ -291,7 +291,7 @@ export const fetchFileContents = action({
   },
 });
 
-export const fetchRepoForWebContainer = action({
+export const fetchRepoFiles = action({
   args: {
     repoId: v.id("repos"),
     branch: v.optional(v.string()),
@@ -304,10 +304,10 @@ export const fetchRepoForWebContainer = action({
     let targetBranch = args.branch ?? repo.defaultBranch;
 
     console.log(
-      `[fetchRepoForWebContainer] Fetching ${repo.githubOwner}/${repo.githubRepo}@${targetBranch}`,
+      `[fetchRepoFiles] Fetching ${repo.githubOwner}/${repo.githubRepo}@${targetBranch}`,
     );
     console.log(
-      `[fetchRepoForWebContainer] Using token: ${token ? "yes (length: " + token.length + ")" : "no (using GITHUB_TOKEN env var)"}`,
+      `[fetchRepoFiles] Using token: ${token ? "yes (length: " + token.length + ")" : "no (using GITHUB_TOKEN env var)"}`,
     );
 
     // Helper to resolve branch name to commit SHA (ensures we get latest, not cached)
@@ -326,7 +326,7 @@ export const fetchRepoForWebContainer = action({
     try {
       const commitSha = await resolveCommitSha(targetBranch);
       console.log(
-        `[fetchRepoForWebContainer] Resolved ${targetBranch} to commit ${commitSha.slice(0, 7)}`,
+        `[fetchRepoFiles] Resolved ${targetBranch} to commit ${commitSha.slice(0, 7)}`,
       );
       const response = await octokit.git.getTree({
         owner: repo.githubOwner,
@@ -342,13 +342,13 @@ export const fetchRepoForWebContainer = action({
       // This happens when a session is created with a new branch that hasn't been pushed yet
       if (targetBranch !== repo.defaultBranch && message.includes("Not Found")) {
         console.log(
-          `[fetchRepoForWebContainer] Branch '${targetBranch}' not found on GitHub, falling back to default branch '${repo.defaultBranch}'`,
+          `[fetchRepoFiles] Branch '${targetBranch}' not found on GitHub, falling back to default branch '${repo.defaultBranch}'`,
         );
         targetBranch = repo.defaultBranch;
         try {
           const fallbackCommitSha = await resolveCommitSha(repo.defaultBranch);
           console.log(
-            `[fetchRepoForWebContainer] Resolved ${repo.defaultBranch} to commit ${fallbackCommitSha.slice(0, 7)}`,
+            `[fetchRepoFiles] Resolved ${repo.defaultBranch} to commit ${fallbackCommitSha.slice(0, 7)}`,
           );
           const fallbackResponse = await octokit.git.getTree({
             owner: repo.githubOwner,
@@ -360,7 +360,7 @@ export const fetchRepoForWebContainer = action({
         } catch (fallbackErr) {
           const fallbackMessage = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
           console.error(
-            `[fetchRepoForWebContainer] Failed to get tree for default branch ${repo.githubOwner}/${repo.githubRepo}@${repo.defaultBranch}:`,
+            `[fetchRepoFiles] Failed to get tree for default branch ${repo.githubOwner}/${repo.githubRepo}@${repo.defaultBranch}:`,
             fallbackMessage,
           );
           throw new Error(
@@ -370,7 +370,7 @@ export const fetchRepoForWebContainer = action({
         }
       } else {
         console.error(
-          `[fetchRepoForWebContainer] Failed to get tree for ${repo.githubOwner}/${repo.githubRepo}@${targetBranch}:`,
+          `[fetchRepoFiles] Failed to get tree for ${repo.githubOwner}/${repo.githubRepo}@${targetBranch}:`,
           message,
         );
         throw new Error(
@@ -409,11 +409,11 @@ export const fetchRepoForWebContainer = action({
       .map((item) => item.path!);
 
     console.log(
-      `[fetchRepoForWebContainer] Tree contains ${allBlobs.length} files, fetching ${filePaths.length}, skipping ${skippedFiles.length}`,
+      `[fetchRepoFiles] Tree contains ${allBlobs.length} files, fetching ${filePaths.length}, skipping ${skippedFiles.length}`,
     );
     if (skippedFiles.length > 0 && skippedFiles.length <= 20) {
       console.log(
-        `[fetchRepoForWebContainer] Skipped files:`,
+        `[fetchRepoFiles] Skipped files:`,
         skippedFiles.map((f) => `${f.path} (${f.reason})`).join(", "),
       );
     }
@@ -436,14 +436,14 @@ export const fetchRepoForWebContainer = action({
     const failedCount = filePaths.length - fetchedCount;
     if (failedCount > 0) {
       console.warn(
-        `[fetchRepoForWebContainer] Failed to fetch ${failedCount} files (see fetchFileBatch errors above)`,
+        `[fetchRepoFiles] Failed to fetch ${failedCount} files (see fetchFileBatch errors above)`,
       );
     }
     console.log(
-      `[fetchRepoForWebContainer] Successfully fetched ${fetchedCount} files`,
+      `[fetchRepoFiles] Successfully fetched ${fetchedCount} files`,
     );
 
-    // 3. Build WebContainer FileSystemTree structure
+    // 3. Build FileSystemTree structure
     const fsTree: Record<string, unknown> = {};
 
     for (const [filePath, content] of Object.entries(fileContents)) {

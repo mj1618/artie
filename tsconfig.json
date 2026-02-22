@@ -33,8 +33,6 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.mts",
-    "./builds/webcontainer-preview/types/**/*.ts",
-    "./builds/webcontainer-preview/dev/types/**/*.ts",
     "./builds/ai-file-editing/types/**/*.ts",
     "./builds/ai-file-editing/dev/types/**/*.ts",
     "./builds/github-commit-flow/types/**/*.ts",
