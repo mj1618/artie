@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "./auth";
 
@@ -122,6 +122,20 @@ export const clearStop = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     await ctx.db.patch("sessions", args.sessionId, { stopRequested: undefined });
+  },
+});
+
+export const updatePreviewUrl = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    url: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get("sessions", args.sessionId);
+    if (!session) return;
+    await ctx.db.patch("sessions", args.sessionId, {
+      currentPreviewUrl: args.url,
+    });
   },
 });
 
@@ -258,6 +272,23 @@ export const createDemo = mutation({
     return await ctx.db.insert("sessions", {
       repoId,
       userId: "demo-user",
+      createdAt: now,
+      lastActiveAt: now,
+    });
+  },
+});
+
+// Internal: create session without auth (for CLI testing)
+export const createInternal = internalMutation({
+  args: {
+    repoId: v.id("repos"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db.insert("sessions", {
+      repoId: args.repoId,
+      userId: args.userId,
       createdAt: now,
       lastActiveAt: now,
     });

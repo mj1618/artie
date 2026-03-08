@@ -62,7 +62,7 @@ export default defineSchema({
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
     connectedBy: v.string(),
     connectedAt: v.number(),
-    runtime: v.optional(v.union(v.literal("docker"), v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"))), // only "docker" is active; others kept for existing DB records
+    runtime: v.optional(v.union(v.literal("particle"), v.literal("docker"), v.literal("webcontainer"), v.literal("flyio-sprite"), v.literal("sandpack"), v.literal("digitalocean-droplet"), v.literal("firecracker"))), // "particle" is active; others kept for existing DB records
     hasConvex: v.optional(v.boolean()),
     projectType: v.optional(v.string()),
     externalConvexUrl: v.optional(v.string()),
@@ -85,6 +85,7 @@ export default defineSchema({
     branchName: v.optional(v.string()),
     featureName: v.optional(v.string()),
     stopRequested: v.optional(v.boolean()),
+    currentPreviewUrl: v.optional(v.string()),
   })
     .index("by_repoId", ["repoId"])
     .index("by_userId", ["userId"]),
@@ -162,27 +163,16 @@ export default defineSchema({
     .index("by_teamId", ["teamId"])
     .index("by_slug", ["slug"]),
 
-  // Docker Containers - containers running on DigitalOcean Docker host
-  dockerContainers: defineTable({
-    // Identifiers
+  // Particles - cloud VMs via RunParticle API
+  particles: defineTable({
     sessionId: v.id("sessions"),
     repoId: v.id("repos"),
     teamId: v.id("teams"),
     userId: v.string(),
 
-    // Container metadata (assigned by host API)
-    containerId: v.optional(v.string()),
-    containerName: v.string(),
-
-    // Port mapping (from host API response)
-    hostPort: v.optional(v.number()),
-
-    // Constructed URLs
+    particleName: v.string(),
     previewUrl: v.optional(v.string()),
-    logsUrl: v.optional(v.string()),
-    terminalUrl: v.optional(v.string()),
 
-    // State machine
     status: v.union(
       v.literal("requested"),
       v.literal("creating"),
@@ -192,120 +182,32 @@ export default defineSchema({
       v.literal("ready"),
       v.literal("active"),
       v.literal("stopping"),
-      v.literal("destroying"),
       v.literal("destroyed"),
       v.literal("unhealthy")
     ),
 
-    // Authentication
-    apiSecret: v.string(),
-
-    // Error handling
     errorMessage: v.optional(v.string()),
     buildLog: v.optional(v.string()),
     retryCount: v.number(),
-    lastRetryAt: v.optional(v.number()),
 
-    // Timestamps
+    branch: v.optional(v.string()),
+
     createdAt: v.number(),
     statusChangedAt: v.number(),
     lastHeartbeatAt: v.optional(v.number()),
     destroyedAt: v.optional(v.number()),
 
-    // Audit trail
     statusHistory: v.array(v.object({
       status: v.string(),
       timestamp: v.number(),
       reason: v.optional(v.string()),
     })),
-
-    // Repository context
-    branch: v.optional(v.string()),
   })
     .index("by_sessionId", ["sessionId"])
     .index("by_repoId", ["repoId"])
     .index("by_repoId_branch", ["repoId", "branch"])
     .index("by_teamId", ["teamId"])
-    .index("by_containerId", ["containerId"])
-    .index("by_containerName", ["containerName"])
+    .index("by_particleName", ["particleName"])
     .index("by_status", ["status"])
     .index("by_status_and_statusChangedAt", ["status", "statusChangedAt"]),
-
-  // Pre-warmed Docker container pool for instant provisioning
-  dockerContainerPool: defineTable({
-    // Container metadata (assigned by host API when created)
-    containerId: v.string(),
-    containerName: v.string(),
-    hostPort: v.number(),
-
-    // Pool status
-    status: v.union(
-      v.literal("creating"),
-      v.literal("ready"),
-      v.literal("assigned"),
-      v.literal("failed"),
-      v.literal("destroying")
-    ),
-
-    // Repo-specific pool containers (optional - generic pool has no repoId)
-    repoId: v.optional(v.id("repos")),
-    imageTag: v.optional(v.string()),
-
-    // Timestamps
-    createdAt: v.number(),
-    readyAt: v.optional(v.number()),
-    assignedAt: v.optional(v.number()),
-
-    // Error info
-    errorMessage: v.optional(v.string()),
-  })
-    .index("by_status", ["status"])
-    .index("by_status_repoId", ["status", "repoId"])
-    .index("by_containerId", ["containerId"])
-    .index("by_containerName", ["containerName"]),
-
-  // Prebuilt Docker images for repos (main branch images)
-  dockerRepoImages: defineTable({
-    repoId: v.id("repos"),
-    branch: v.string(),
-    imageTag: v.string(),
-    commitSha: v.string(),
-    status: v.union(
-      v.literal("building"),
-      v.literal("ready"),
-      v.literal("failed")
-    ),
-    sizeBytes: v.optional(v.number()),
-    errorMessage: v.optional(v.string()),
-    createdAt: v.number(),
-    createdBy: v.string(),
-    lastUsedAt: v.optional(v.number()),
-    useCount: v.number(),
-  })
-    .index("by_repoId", ["repoId"])
-    .index("by_repoId_branch", ["repoId", "branch"])
-    .index("by_imageTag", ["imageTag"])
-    .index("by_status", ["status"]),
-
-  // Docker container checkpoints (docker commit snapshots) for fast restore
-  dockerCheckpoints: defineTable({
-    repoId: v.id("repos"),
-    branch: v.string(),
-    checkpointName: v.string(),
-    imageTag: v.optional(v.string()),
-    sourceContainerId: v.string(),
-    status: v.union(
-      v.literal("creating"),
-      v.literal("ready"),
-      v.literal("failed"),
-      v.literal("expired")
-    ),
-    errorMessage: v.optional(v.string()),
-    createdAt: v.number(),
-    lastUsedAt: v.optional(v.number()),
-    useCount: v.number(),
-  })
-    .index("by_repoId", ["repoId"])
-    .index("by_repoId_branch", ["repoId", "branch"])
-    .index("by_status", ["status"]),
 });

@@ -298,6 +298,7 @@ function WorkspacePageInner() {
             repoId={repoId}
             sessionId={sessionId}
             branch={activeSession?.branchName}
+            runtime={repo?.runtime}
           />
         }
       />

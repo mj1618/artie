@@ -494,14 +494,20 @@ async function createCommitWithFiles(
   branch: string,
   files: FileChange[],
   commitMessage: string,
+  knownBranchSha?: string,
 ): Promise<{ commitSha: string; commitUrl: string }> {
-  // 1. Get the current commit SHA of the branch
-  const { data: refData } = await octokit.git.getRef({
-    owner,
-    repo,
-    ref: `heads/${branch}`,
-  });
-  const baseSha = refData.object.sha;
+  // 1. Get the current commit SHA of the branch (skip if caller already has it)
+  let baseSha: string;
+  if (knownBranchSha) {
+    baseSha = knownBranchSha;
+  } else {
+    const { data: refData } = await octokit.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`,
+    });
+    baseSha = refData.object.sha;
+  }
 
   // 2. Get the base tree
   const { data: baseCommit } = await octokit.git.getCommit({
@@ -650,6 +656,7 @@ export const commitToBranch = action({
       args.branchName,
       fileChange.files,
       args.commitMessage,
+      headSha,
     );
 
     // 4. Create the pull request
@@ -765,6 +772,7 @@ export const pushChanges = action({
         branchName,
         fileChange.files,
         commitMessage,
+        headSha,
       );
 
       // Create the pull request
@@ -829,7 +837,7 @@ export const listOpenPullRequests = action({
     }> = [];
 
     // Fetch PRs from each repo in parallel
-    const prPromises = repos.map(async (repo) => {
+    const prPromises = repos.map(async (repo: { githubOwner: string; githubRepo: string; _id: string; teamName?: string }) => {
       try {
         const { data: prs } = await octokit.pulls.list({
           owner: repo.githubOwner,
@@ -1071,12 +1079,14 @@ export const autoCommitToBranch = internalAction({
     const octokit = createOctokit(token);
 
     // Ensure the branch exists — create from default branch if missing
+    let branchSha: string;
     try {
-      await octokit.git.getRef({
+      const { data: refData } = await octokit.git.getRef({
         owner: repo.githubOwner,
         repo: repo.githubRepo,
         ref: `heads/${args.branchName}`,
       });
+      branchSha = refData.object.sha;
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
       if (status === 404) {
@@ -1085,11 +1095,12 @@ export const autoCommitToBranch = internalAction({
           repo: repo.githubRepo,
           ref: `heads/${repo.defaultBranch}`,
         });
+        branchSha = mainRef.object.sha;
         await octokit.git.createRef({
           owner: repo.githubOwner,
           repo: repo.githubRepo,
           ref: `refs/heads/${args.branchName}`,
-          sha: mainRef.object.sha,
+          sha: branchSha,
         });
         console.log(`[autoCommitToBranch] Created branch ${args.branchName} from ${repo.defaultBranch}`);
       } else {
@@ -1104,6 +1115,7 @@ export const autoCommitToBranch = internalAction({
       args.branchName,
       fileChange.files,
       args.commitMessage,
+      branchSha,
     );
 
     // Find or create a PR for this branch

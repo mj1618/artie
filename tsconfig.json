@@ -196,6 +196,7 @@
   ],
   "exclude": [
     "node_modules",
-    "builds"
+    "builds",
+    "firecracker-api"
   ]
 }

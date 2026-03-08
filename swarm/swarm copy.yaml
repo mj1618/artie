@@ -101,5 +101,5 @@ tasks:
 pipelines:
   main:
     iterations: 200
-    parallelism: 10
+    parallelism: 2
     tasks: [planner, developer, reviewer]

@@ -4,54 +4,43 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 // ====================
-// DOCKER SCHEDULER JOBS
+// PARTICLE SCHEDULER JOBS
 // ====================
 
 crons.interval(
-  "docker:processRequested",
-  { seconds: 2 },
-  internal.dockerScheduler.processRequested
-);
-
-crons.interval(
-  "docker:checkHeartbeats",
+  "particle:checkHeartbeats",
   { seconds: 30 },
-  internal.dockerScheduler.checkHeartbeats
+  internal.particleScheduler.checkHeartbeats
 );
 
 crons.interval(
-  "docker:checkTimeouts",
+  "particle:checkTimeouts",
   { seconds: 15 },
-  internal.dockerScheduler.checkTimeouts
+  internal.particleScheduler.checkTimeouts
 );
 
 crons.interval(
-  "docker:processStopping",
+  "particle:processStopping",
   { seconds: 10 },
-  internal.dockerScheduler.processStopping
+  internal.particleScheduler.processStopping
 );
 
 crons.interval(
-  "docker:processUnhealthy",
+  "particle:processUnhealthy",
   { seconds: 30 },
-  internal.dockerScheduler.processUnhealthy
+  internal.particleScheduler.processUnhealthy
 );
 
 crons.interval(
-  "docker:cleanupOldRecords",
+  "particle:cleanupOldRecords",
   { hours: 1 },
-  internal.dockerScheduler.cleanupOldRecords
+  internal.particleScheduler.cleanupOldRecords
 );
 
 crons.interval(
-  "docker:reconcile",
+  "particle:reconcile",
   { seconds: 60 },
-  internal.dockerScheduler.reconcile
+  internal.particleScheduler.reconcile
 );
-
-// DOCKER POOL MAINTENANCE
-crons.interval("docker:replenishPool", { seconds: 5 }, internal.dockerPool.replenishPool);
-crons.interval("docker:cleanupFailedPool", { seconds: 30 }, internal.dockerPool.cleanupFailedPoolContainers);
-crons.interval("docker:cleanupAssignedPool", { minutes: 5 }, internal.dockerPool.cleanupAssignedPoolContainers);
 
 export default crons;

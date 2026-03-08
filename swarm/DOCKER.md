@@ -340,6 +340,43 @@ curl -X DELETE http://<HOST_IP>:8080/api/checkpoints/<name> \
   -H "Authorization: Bearer $API_SECRET"
 ```
 
+## Anthropic API Key Proxy
+
+The Docker host runs a reverse proxy (port 8082) so that containers never hold real Anthropic API keys. Claude Code runs inside containers and talks to the proxy instead of `api.anthropic.com` directly.
+
+### How It Works
+
+1. Containers receive `ANTHROPIC_BASE_URL=http://172.17.0.1:8082` and a dummy `ANTHROPIC_API_KEY` (starts with `sk-ant-` to pass Claude Code's format check)
+2. When Claude Code makes an API request, it hits the proxy on the Docker bridge gateway
+3. The proxy replaces the dummy key with the real one and forwards to `api.anthropic.com`
+4. Responses (including streams) are piped back to the container
+
+### Team-Specific Keys
+
+The Convex backend passes the real API key to the Docker host as `anthropicApiKey` in the setup payload (separate from `envVars`). During setup, the host registers a mapping from the container's Docker bridge IP to the real key. The proxy looks up the source IP on each request. If no per-container key is registered, it falls back to the platform default `ANTHROPIC_API_KEY` from `/opt/docker-manager/.env`.
+
+### Configuration
+
+Add the platform default API key to the Docker host:
+
+```bash
+ssh root@<HOST_IP> 'echo "ANTHROPIC_API_KEY=sk-ant-..." >> /opt/docker-manager/.env && systemctl restart docker-manager'
+```
+
+### Key Management Endpoints
+
+```bash
+# Register per-container key (called automatically during setup)
+curl -X POST http://<HOST_IP>:8081/api/proxy-keys/<container_id> \
+  -H "Authorization: Bearer $API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"apiKey": "sk-ant-..."}'
+
+# Deregister (called automatically on container delete)
+curl -X DELETE http://<HOST_IP>:8081/api/proxy-keys/<container_id> \
+  -H "Authorization: Bearer $API_SECRET"
+```
+
 ## Directory Structure on Host
 
 ```
@@ -351,7 +388,7 @@ curl -X DELETE http://<HOST_IP>:8080/api/checkpoints/<name> \
 ├── pnpm-store/            # Shared pnpm content-addressable store
 ├── checkpoints/           # CRIU container checkpoints
 ├── logs/                  # Container logs
-└── .env                   # API_SECRET
+└── .env                   # API_SECRET, ANTHROPIC_API_KEY
 ```
 
 ## Systemd Service
@@ -373,7 +410,8 @@ systemctl restart docker-manager
 
 The host firewall (ufw) allows:
 - SSH (port 22)
-- Management API (port 8080)
+- Management API (port 8081)
+- Anthropic API proxy (port 8082) -- bound to 172.17.0.1 only, not exposed externally
 - Container ports (10000-20000)
 
 ## Log Streaming
@@ -393,8 +431,16 @@ Add to Convex:
 
 ```
 DOCKER_HOST=<droplet_ip>
-DOCKER_HOST_URL=http://<droplet_ip>:8080
+DOCKER_HOST_URL=http://<droplet_ip>:8081
 DOCKER_API_SECRET=<random_64_char_hex>
+CLAUDE_API_KEY=sk-ant-...  (platform default, also used as proxy fallback)
+```
+
+Add to Docker host `/opt/docker-manager/.env`:
+
+```
+API_SECRET=<random_64_char_hex>
+ANTHROPIC_API_KEY=sk-ant-...  (platform default for the proxy)
 ```
 
 ## Integration with Artie

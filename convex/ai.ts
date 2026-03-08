@@ -209,6 +209,7 @@ function selectContextFiles(
 function buildSystemPrompt(
   fileTree: string,
   fileContents: Record<string, string>,
+  options?: { previewUrl?: string },
 ): string {
   const agentsMdContent = fileContents["AGENTS.md"];
 
@@ -318,7 +319,13 @@ export function Button({ children }) {
 </edit>
 
 <bash>npx tsc --noEmit</bash>
-${agentsMdBlock}
+${agentsMdBlock}${options?.previewUrl ? `
+## LIVE PREVIEW
+
+The app is running in a cloud VM with a live preview the user can see in their browser.
+Preview URL: ${options.previewUrl}
+The dev server automatically reloads when files change, so the user sees your changes immediately.
+` : ""}
 ## PROJECT CONTEXT
 
 File tree (${totalFiles} files total):
@@ -447,7 +454,7 @@ function extractDisplayContent(text: string): string {
 // --- Runtime execution helpers for the agent loop ---
 
 type RuntimeExecInfo =
-  | { type: "docker"; hostContainerId: string; hostUrl: string; apiSecret: string }
+  | { type: "particle"; particleName: string; apiKey: string; previewUrl?: string }
   | null;
 
 async function resolveRuntimeExecInfo(
@@ -455,20 +462,20 @@ async function resolveRuntimeExecInfo(
   repo: { runtime?: string } | null,
   sessionId: string,
 ): Promise<RuntimeExecInfo> {
-  if (!repo?.runtime || repo.runtime !== "docker") return null;
+  if (!repo?.runtime) return null;
 
-  const container = await ctx.runQuery(api.dockerContainers.getForSession, {
+  // All runtimes now use Particle
+  const particle = await ctx.runQuery(api.particles.getForSession, {
     sessionId: sessionId as any,
   });
   if (
-    container &&
-    (container.status === "ready" || container.status === "active") &&
-    container.containerId
+    particle &&
+    (particle.status === "ready" || particle.status === "active") &&
+    particle.particleName
   ) {
-    const apiSecret = process.env.DOCKER_API_SECRET;
-    const hostUrl = process.env.DOCKER_HOST_URL;
-    if (apiSecret && hostUrl) {
-      return { type: "docker", hostContainerId: container.containerId, hostUrl, apiSecret };
+    const apiKey = process.env.PARTICLE_API_KEY;
+    if (apiKey) {
+      return { type: "particle", particleName: particle.particleName, apiKey, previewUrl: particle.previewUrl ?? undefined };
     }
   }
 
@@ -480,26 +487,36 @@ async function execCommandInRuntime(
   command: string,
   timeout = 120000,
 ): Promise<{ exitCode: number; output: string }> {
-  const fullCommand = `cd /app && ${command}`;
-
   const controller = new AbortController();
   const fetchTimeout = setTimeout(() => controller.abort(), timeout + 10000);
+
   try {
+    const fullCommand = `cd /app && ${command}`;
     const resp = await fetch(
-      `${runtimeInfo.hostUrl}/api/containers/${runtimeInfo.hostContainerId}/exec`,
+      `https://api.runparticle.com/v1/particles/${runtimeInfo.particleName}/exec`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${runtimeInfo.apiSecret}`,
+          Authorization: `Bearer ${runtimeInfo.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ command: fullCommand, timeout }),
+        body: JSON.stringify({ command: fullCommand }),
         signal: controller.signal,
       },
     );
-    if (!resp.ok) throw new Error(`Docker exec failed: ${await resp.text()}`);
-    const result = (await resp.json()) as { exitCode: number; stdout: string; stderr: string };
-    return { exitCode: result.exitCode, output: (result.stdout || "") + (result.stderr || "") };
+
+    const responseText = await resp.text();
+    if (!resp.ok) throw new Error(`Particle exec failed: ${responseText}`);
+
+    try {
+      const result = JSON.parse(responseText);
+      return {
+        exitCode: typeof result.exit_code === "number" ? result.exit_code : 0,
+        output: result.output ?? responseText,
+      };
+    } catch {
+      return { exitCode: 0, output: responseText };
+    }
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error(`Command timed out after ${timeout}ms`);
@@ -523,6 +540,10 @@ async function applyFilesToRuntime(
     const command = `${mkdirCmd}printf '%s' '${base64Content}' | base64 -d > '${file.path}'`;
     await execCommandInRuntime(runtimeInfo, command, 30000);
   }
+}
+
+function getRuntimeWorkDir(runtimeInfo: NonNullable<RuntimeExecInfo>): string {
+  return "/app";
 }
 
 const MAX_AGENT_ITERATIONS = 5;
@@ -594,133 +615,105 @@ export const generateResponse = action({
       let systemPrompt: string;
       let repoFileContents: Record<string, string> = {};
       const originalFileContents: Record<string, string> = {};
+
+      // Resolve runtime info early so we can use it for file tree fetch and later for bash execution
+      const runtimeInfo = repo ? await resolveRuntimeExecInfo(ctx, repo, args.sessionId) : null;
+
       if (repo) {
         let fileTreeStr = "";
         const fileContents: Record<string, string> = {};
 
-        // Check if we should fetch from a Docker container
-        if (Object.keys(fileContents).length === 0) {
-          const dockerContainer = session
-            ? await ctx.runQuery(api.dockerContainers.getForSession, {
-              sessionId: args.sessionId,
-            })
-            : null;
+        // Check if we should fetch from a Particle VM
+        if (Object.keys(fileContents).length === 0 && runtimeInfo) {
+          try {
+            const execParticleCmd = async (command: string, timeout = 30000) => {
+              return await execCommandInRuntime(runtimeInfo, command, timeout);
+            };
 
-          const useDockerForContext =
-            dockerContainer &&
-            (dockerContainer.status === "ready" || dockerContainer.status === "active") &&
-            dockerContainer.containerId;
+            // Get file tree from Particle VM
+            const treeResult = await execParticleCmd(
+              `find /app -maxdepth 8 -type f ` +
+              `-not -path '*/node_modules/*' -not -path '*/.git/*' ` +
+              `-not -path '*/dist/*' -not -path '*/.next/*' ` +
+              `-not -name '*.lock' -not -name 'package-lock.json' ` +
+              `2>/dev/null | head -500`
+            );
 
-          if (useDockerForContext && dockerContainer?.containerId) {
-            const dockerApiSecret = process.env.DOCKER_API_SECRET;
-            const dockerHostUrl = process.env.DOCKER_HOST_URL!;
+            if (treeResult.exitCode === 0 && treeResult.output.trim()) {
+              const filePaths = treeResult.output.trim().split("\n")
+                .map((p) => p.replace(/^\/app\//, ""))
+                .filter((p) => p && !shouldSkip(p));
 
-            if (dockerApiSecret) {
-              try {
-                const execDockerCmd = async (command: string, timeout = 30000) => {
-                  const resp = await fetch(
-                    `${dockerHostUrl}/api/containers/${dockerContainer.containerId}/exec`,
-                    {
-                      method: "POST",
-                      headers: {
-                        Authorization: `Bearer ${dockerApiSecret}`,
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({ command, timeout }),
-                    }
-                  );
-                  if (!resp.ok) throw new Error(`Docker exec failed: ${await resp.text()}`);
-                  return (await resp.json()) as { exitCode: number; stdout: string; stderr: string };
-                };
+              const tree = filePaths.map((p) => ({ path: p, type: "blob" as const, size: 0 }));
+              fileTreeStr = filePaths.join("\n");
 
-                // Get file tree from Docker container
-                const treeResult = await execDockerCmd(
-                  `find /app -maxdepth 8 -type f ` +
-                  `-not -path '*/node_modules/*' -not -path '*/.git/*' ` +
-                  `-not -path '*/dist/*' -not -path '*/.next/*' ` +
-                  `-not -name '*.lock' -not -name 'package-lock.json' ` +
-                  `2>/dev/null | head -500`
-                );
+              // Get file sizes for context selection
+              const sizeResult = await execParticleCmd(
+                `find /app -maxdepth 8 -type f ` +
+                `-not -path '*/node_modules/*' -not -path '*/.git/*' ` +
+                `-not -path '*/dist/*' -not -path '*/.next/*' ` +
+                `-not -name '*.lock' -not -name 'package-lock.json' ` +
+                `-printf '%s\\t%P\\n' 2>/dev/null | head -500`
+              );
 
-                if (treeResult.exitCode === 0 && treeResult.stdout.trim()) {
-                  const filePaths = treeResult.stdout.trim().split("\n")
-                    .map((p) => p.replace(/^\/app\//, ""))
-                    .filter((p) => p && !shouldSkip(p));
+              if (sizeResult.exitCode === 0 && sizeResult.output.trim()) {
+                const sizeMap = new Map<string, number>();
+                for (const line of sizeResult.output.trim().split("\n")) {
+                  const [sizeStr, path] = line.split("\t", 2);
+                  if (path && sizeStr) sizeMap.set(path, parseInt(sizeStr, 10) || 0);
+                }
+                for (const t of tree) {
+                  t.size = sizeMap.get(t.path) ?? 0;
+                }
+              }
 
-                  const tree = filePaths.map((p) => ({ path: p, type: "blob" as const, size: 0 }));
-                  fileTreeStr = filePaths.join("\n");
+              const sessionEdits = await ctx.runQuery(
+                internal.fileChanges.getCurrentFiles,
+                { sessionId: args.sessionId }
+              );
+              const editedPaths = Object.keys(sessionEdits);
+              const contextPaths = selectContextFiles(tree, editedPaths);
 
-                  // Get file sizes for context selection
-                  const sizeResult = await execDockerCmd(
-                    `find /app -maxdepth 8 -type f ` +
-                    `-not -path '*/node_modules/*' -not -path '*/.git/*' ` +
-                    `-not -path '*/dist/*' -not -path '*/.next/*' ` +
-                    `-not -name '*.lock' -not -name 'package-lock.json' ` +
-                    `-printf '%s\\t%P\\n' 2>/dev/null | head -500`
-                  );
+              // Fetch file contents via exec in batches
+              const BATCH = 10;
+              for (let i = 0; i < contextPaths.length; i += BATCH) {
+                const batch = contextPaths.slice(i, i + BATCH);
+                const separator = "===COMPOSURE_FILE_SEP===";
+                const catCmd = batch
+                  .map((p) => `printf '${separator}%s${separator}\\n' '${p}' && cat '/app/${p}' 2>/dev/null`)
+                  .join(" && ");
 
-                  if (sizeResult.exitCode === 0 && sizeResult.stdout.trim()) {
-                    const sizeMap = new Map<string, number>();
-                    for (const line of sizeResult.stdout.trim().split("\n")) {
-                      const [sizeStr, path] = line.split("\t", 2);
-                      if (path && sizeStr) sizeMap.set(path, parseInt(sizeStr, 10) || 0);
-                    }
-                    for (const t of tree) {
-                      t.size = sizeMap.get(t.path) ?? 0;
-                    }
-                  }
-
-                  const sessionEdits = await ctx.runQuery(
-                    internal.fileChanges.getCurrentFiles,
-                    { sessionId: args.sessionId }
-                  );
-                  const editedPaths = Object.keys(sessionEdits);
-                  const contextPaths = selectContextFiles(tree, editedPaths);
-
-                  // Fetch file contents via exec in batches
-                  const BATCH = 10;
-                  for (let i = 0; i < contextPaths.length; i += BATCH) {
-                    const batch = contextPaths.slice(i, i + BATCH);
-                    const separator = "===COMPOSURE_FILE_SEP===";
-                    const catCmd = batch
-                      .map((p) => `printf '${separator}%s${separator}\\n' '${p}' && cat '/app/${p}' 2>/dev/null`)
-                      .join(" && ");
-
-                    const readResult = await execDockerCmd(catCmd);
-                    if (readResult.exitCode === 0 || readResult.stdout) {
-                      const output = readResult.stdout;
-                      const parts = output.split(separator);
-                      // Parts alternate: empty, path, empty, content, path, empty, content, ...
-                      for (let j = 1; j < parts.length; j += 2) {
-                        const filePath = parts[j].trim();
-                        if (filePath && j + 1 < parts.length) {
-                          const content = parts[j + 1];
-                          if (content !== undefined) {
-                            // Content starts after the newline following the separator
-                            const trimmedContent = content.startsWith("\n") ? content.slice(1) : content;
-                            if (trimmedContent.length <= MAX_FILE_SIZE) {
-                              fileContents[filePath] = trimmedContent;
-                            }
-                          }
+                const readResult = await execParticleCmd(catCmd);
+                if (readResult.exitCode === 0 || readResult.output) {
+                  const output = readResult.output;
+                  const parts = output.split(separator);
+                  for (let j = 1; j < parts.length; j += 2) {
+                    const filePath = parts[j].trim();
+                    if (filePath && j + 1 < parts.length) {
+                      const content = parts[j + 1];
+                      if (content !== undefined) {
+                        const trimmedContent = content.startsWith("\n") ? content.slice(1) : content;
+                        if (trimmedContent.length <= MAX_FILE_SIZE) {
+                          fileContents[filePath] = trimmedContent;
                         }
                       }
                     }
                   }
-
-                  for (const [path, content] of Object.entries(sessionEdits)) {
-                    fileContents[path] = content;
-                  }
-
-                  console.log(`[AI] Fetched ${Object.keys(fileContents).length} files from Docker container`);
                 }
-              } catch (dockerError) {
-                console.error("[AI] Failed to fetch from Docker container, falling back to GitHub:", dockerError);
               }
+
+              for (const [path, content] of Object.entries(sessionEdits)) {
+                fileContents[path] = content as string;
+              }
+
+              console.log(`[AI] Fetched ${Object.keys(fileContents).length} files from Particle VM`);
             }
+          } catch (particleError) {
+            console.error("[AI] Failed to fetch from Particle VM, falling back to GitHub:", particleError);
           }
         }
 
-        // If we didn't get files from a container (or it failed), fetch from GitHub
+        // If we didn't get files from a Particle (or it failed), fetch from GitHub
         if (Object.keys(fileContents).length === 0) {
           const userToken = await getUserGithubToken(ctx);
           const octokit = new Octokit({ auth: userToken || process.env.GITHUB_TOKEN });
@@ -810,7 +803,9 @@ export const generateResponse = action({
           }
         }
 
-        systemPrompt = buildSystemPrompt(fileTreeStr, fileContents);
+        systemPrompt = buildSystemPrompt(fileTreeStr, fileContents, {
+          previewUrl: session?.currentPreviewUrl ?? undefined,
+        });
         if (repo.customPrompt) {
           systemPrompt += `\n\n## Custom Instructions\n\n${repo.customPrompt}`;
         }
@@ -843,8 +838,7 @@ Your friendly explanation here
       );
 
       try {
-        // 5. Resolve runtime exec info for server-side bash execution
-        const runtimeInfo = await resolveRuntimeExecInfo(ctx, repo, args.sessionId);
+        // 5. Runtime info already resolved above (before file tree fetch)
 
         // 6. Agent loop: call LLM, execute bash, feed results back
         type TextPart = { type: "text"; text: string };
@@ -999,13 +993,13 @@ Your friendly explanation here
           lastFullText = fullText;
           allFileChanges = [...allFileChanges, ...fileChanges];
 
-          // 6d. Apply file changes to the container so bash commands see them
+          // 6d. Apply file changes to the particle so bash commands see them
           if (fileChanges.length > 0 && runtimeInfo) {
             try {
               await applyFilesToRuntime(runtimeInfo, fileChanges);
-              console.log(`[AI] Applied ${fileChanges.length} files to ${runtimeInfo.type} container`);
+              console.log(`[AI] Applied ${fileChanges.length} files to particle`);
             } catch (applyErr) {
-              console.error("[AI] Failed to apply files to container:", applyErr);
+              console.error("[AI] Failed to apply files to particle:", applyErr);
             }
           }
 
@@ -1251,7 +1245,7 @@ Your friendly explanation here
 });
 
 // ---------------------------------------------------------------------------
-// Claude CLI-based generation (runs inside Docker container)
+// Claude CLI-based generation (runs inside Particle VM)
 // ---------------------------------------------------------------------------
 
 const CLI_POLL_INTERVAL = 2000;
@@ -1280,20 +1274,17 @@ export const generateResponseViaCli = action({
         })
         : null;
 
-      // Resolve model and API key
+      // Resolve model
       const DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-6";
       let modelName: string = DEFAULT_ANTHROPIC_MODEL;
       if (team?.llmProvider === "anthropic" && team?.llmModel) {
         modelName = team.llmModel;
       }
-      const anthropicApiKey =
-        (team?.llmProvider === "anthropic" && team?.llmApiKey) ? team.llmApiKey
-        : process.env.CLAUDE_API_KEY || "";
 
-      // Resolve runtime -- must be docker
+      // Resolve runtime -- must be a running particle
       const runtimeInfo = await resolveRuntimeExecInfo(ctx, repo, args.sessionId);
-      if (!runtimeInfo || runtimeInfo.type !== "docker") {
-        throw new Error("Claude CLI generation requires a running Docker container");
+      if (!runtimeInfo) {
+        throw new Error("Claude CLI generation requires a running Particle VM");
       }
 
       // Create streaming message placeholder
@@ -1305,6 +1296,14 @@ export const generateResponseViaCli = action({
       try {
         // Build prompt with conversation history
         const promptParts: string[] = [];
+        const runtimePreviewUrl = runtimeInfo.previewUrl;
+        const previewUrl = session?.currentPreviewUrl ?? runtimePreviewUrl;
+        if (previewUrl) {
+          promptParts.push(
+            `[Live Preview: The app is running and the user can see it at ${previewUrl}. The dev server auto-reloads on file changes.]`,
+            "",
+          );
+        }
         if (recentMessages.length > 1) {
           promptParts.push("Recent conversation:");
           for (const msg of recentMessages.slice(0, -1)) {
@@ -1321,7 +1320,7 @@ export const generateResponseViaCli = action({
         const prompt = promptParts.join("\n");
         const promptBase64 = Buffer.from(prompt).toString("base64");
 
-        // Write prompt file to container
+        // Write prompt file to particle
         await execCommandInRuntime(
           runtimeInfo,
           `printf '%s' '${promptBase64}' | base64 -d > /tmp/claude-prompt.txt`,
@@ -1352,26 +1351,28 @@ export const generateResponseViaCli = action({
             "npm install -g @anthropic-ai/claude-code 2>&1",
             120000,
           );
-          // Skip onboarding prompts (configure for non-root node user)
+          // Skip onboarding prompts
           await execCommandInRuntime(
             runtimeInfo,
-            `mkdir -p /home/node/.claude && echo '{"hasCompletedOnboarding":true}' > /home/node/.claude/settings.json && chown -R node:node /home/node/.claude`,
+            `mkdir -p ~/.claude && echo '{"hasCompletedOnboarding":true}' > ~/.claude/settings.json`,
             10000,
           );
           console.log("[CLI] Claude CLI installed");
         }
 
-        // Ensure node user can read/write project files and tmp artifacts
+        const workDir = "/app";
+
+        // Ensure prompt is readable
         await execCommandInRuntime(
           runtimeInfo,
-          `chown -R node:node /app && chmod 644 /tmp/claude-prompt.txt`,
-          60000,
+          `chmod 644 /tmp/claude-prompt.txt`,
+          10000,
         );
 
-        // Mark /app as safe so root-user git commands work after chown to node
+        // Mark workdir as safe for git
         await execCommandInRuntime(
           runtimeInfo,
-          "git config --global --add safe.directory /app",
+          `git config --global --add safe.directory ${workDir}`,
           10000,
         );
 
@@ -1385,8 +1386,14 @@ export const generateResponseViaCli = action({
         const initialSha = headBefore.output.trim();
         console.log(`[CLI] Initial HEAD SHA: ${initialSha}`);
 
-        // Launch Claude CLI as non-root node user (--dangerously-skip-permissions requires non-root)
-        const launchCmd = `runuser -u node -- bash -c 'ANTHROPIC_API_KEY=${anthropicApiKey} claude -p --dangerously-skip-permissions --output-format stream-json --verbose --model ${modelName} < /tmp/claude-prompt.txt > /tmp/claude-output.jsonl 2>&1 & echo $!'`;
+        // Launch Claude CLI with API key
+        const anthropicApiKey = (team?.llmProvider === "anthropic" && team?.llmApiKey)
+          ? team.llmApiKey
+          : process.env.CLAUDE_API_KEY || "";
+        if (!anthropicApiKey) {
+          throw new Error("No Anthropic API key configured for this team");
+        }
+        const launchCmd = `ANTHROPIC_API_KEY=${anthropicApiKey} claude -p --dangerously-skip-permissions --output-format stream-json --verbose --model ${modelName} < /tmp/claude-prompt.txt > /tmp/claude-output.jsonl 2>&1 & echo $!`;
 
         const launchResult = await execCommandInRuntime(runtimeInfo, launchCmd, 30000);
         const pid = launchResult.output.trim();

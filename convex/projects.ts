@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "./auth";
 
@@ -39,7 +39,7 @@ export const addRepo = mutation({
     githubRepo: v.string(),
     defaultBranch: v.optional(v.string()),
     pushStrategy: v.union(v.literal("direct"), v.literal("pr")),
-    runtime: v.optional(v.literal("docker")),
+    runtime: v.optional(v.union(v.literal("docker"), v.literal("flyio-sprite"), v.literal("firecracker"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -68,7 +68,7 @@ export const addRepo = mutation({
       pushStrategy: args.pushStrategy,
       connectedBy: userId,
       connectedAt: Date.now(),
-      runtime: args.runtime ?? "docker",
+      runtime: args.runtime ?? "firecracker",
     });
   },
 });
@@ -99,7 +99,7 @@ export const updateRepo = mutation({
     repoId: v.id("repos"),
     pushStrategy: v.optional(v.union(v.literal("direct"), v.literal("pr"))),
     defaultBranch: v.optional(v.string()),
-    runtime: v.optional(v.literal("docker")),
+    runtime: v.optional(v.union(v.literal("docker"), v.literal("flyio-sprite"), v.literal("firecracker"))),
     externalConvexUrl: v.optional(v.string()),
     externalConvexDeployment: v.optional(v.string()),
     clearExternalConvex: v.optional(v.boolean()),
@@ -119,7 +119,7 @@ export const updateRepo = mutation({
     const updates: Partial<{
       pushStrategy: "direct" | "pr";
       defaultBranch: string;
-      runtime: "docker";
+      runtime: "docker" | "flyio-sprite" | "firecracker";
       externalConvexUrl: string;
       externalConvexDeployment: string;
       envVars: Array<{ key: string; value: string }>;
@@ -209,3 +209,51 @@ export const listAll = query({
     return reposArrays.flat();
   },
 });
+
+export const migrateAllToSprites = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const allRepos = await ctx.db.query("repos").collect();
+    let updated = 0;
+    for (const repo of allRepos) {
+      if (repo.runtime !== "flyio-sprite") {
+        await ctx.db.patch("repos", repo._id, { runtime: "flyio-sprite" });
+        updated++;
+      }
+    }
+    return { total: allRepos.length, updated };
+  },
+});
+
+export const migrateAllToFirecracker = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const allRepos = await ctx.db.query("repos").collect();
+    let updated = 0;
+    for (const repo of allRepos) {
+      if (repo.runtime !== "firecracker") {
+        await ctx.db.patch("repos", repo._id, { runtime: "firecracker" });
+        updated++;
+      }
+    }
+    return { total: allRepos.length, updated };
+  },
+});
+
+// Internal: find repo by GitHub name (for CLI testing)
+export const findRepoByGithubName = internalQuery({
+  args: { githubRepo: v.string() },
+  handler: async (ctx, args) => {
+    const repos = await ctx.db.query("repos").collect();
+    return repos.find((r) => r.githubRepo === args.githubRepo) ?? null;
+  },
+});
+
+// Internal: list all repos (for CLI testing)
+export const listAllInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("repos").collect();
+  },
+});
+

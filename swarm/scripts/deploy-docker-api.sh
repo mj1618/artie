@@ -34,15 +34,23 @@ const fs = require('fs');
 const http = require('http');
 const WebSocket = require('ws');
 
+const https = require('https');
+
 require('dotenv').config({ path: '/opt/docker-manager/.env' });
 
 const app = express();
 const docker = new Docker();
 const PORT = 8081;
+const PROXY_PORT = 8082;
 const API_SECRET = process.env.API_SECRET;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const REPO_CACHE_DIR = '/opt/docker-manager/repo-cache';
 const PNPM_STORE_DIR = '/opt/docker-manager/pnpm-store';
 const LOGS_DIR = '/opt/docker-manager/logs';
+
+// Anthropic API proxy: maps container IP -> team-specific API key.
+// Falls back to the platform default ANTHROPIC_API_KEY from .env.
+const proxyKeysByIp = new Map();
 
 // Port allocation
 let nextPort = 10000;
@@ -225,6 +233,7 @@ app.post('/api/containers/:id/setup', authMiddleware, async (req, res) => {
     hasMainImage,
     buildMainImage,
     envVars = {},
+    anthropicApiKey,
     restoredFromCheckpoint = false,
   } = req.body;
 
@@ -233,6 +242,21 @@ app.post('/api/containers/:id/setup', authMiddleware, async (req, res) => {
   // Store callback secret for per-container auth (terminal WebSocket, logs SSE)
   if (callbackSecret) {
     storeCallbackSecret(containerId, callbackSecret);
+  }
+
+  // Register per-container Anthropic API key for the proxy
+  if (anthropicApiKey) {
+    try {
+      const container = docker.getContainer(containerId);
+      const info = await container.inspect();
+      const ip = info.NetworkSettings?.IPAddress;
+      if (ip) {
+        proxyKeysByIp.set(ip, anthropicApiKey);
+        console.log(`Proxy key registered for ${containerId} (${ip}) during setup`);
+      }
+    } catch (err) {
+      console.error(`Failed to register proxy key for ${containerId}:`, err.message);
+    }
   }
 
   // Return immediately
@@ -346,6 +370,18 @@ async function execInContainer(container, cmd, timeout = 300000) {
   });
 }
 
+async function ensureRunning(container) {
+  const info = await container.inspect();
+  if (info.State?.Paused) {
+    console.log(`Unpausing container ${info.Id.slice(0, 12)} before exec`);
+    await container.unpause();
+  } else if (!info.State?.Running) {
+    console.log(`Starting stopped container ${info.Id.slice(0, 12)}`);
+    await container.start();
+  }
+  return info;
+}
+
 async function runSetup(containerId, opts) {
   const {
     repo,
@@ -386,16 +422,19 @@ async function runSetup(containerId, opts) {
   }
 
   try {
-    const info = await container.inspect();
+    const info = await ensureRunning(container);
     containerName = info.Name.replace(/^\//, '');
   } catch (err) {
-    console.error('Failed to get container info:', err);
+    console.error('Failed to get/unpause container:', err);
     return;
   }
 
   try {
     // Initialize build log file inside container
     await execInContainer(container, 'echo "=== Composure Build Log ===" > /tmp/composure-build.log', 5000);
+
+    // Mark /app as safe for git (root runs setup but /app may be owned by node)
+    await execInContainer(container, 'git config --global --add safe.directory /app', 5000);
 
     const [owner, repoName] = repo.split('/');
 
@@ -420,19 +459,29 @@ async function runSetup(containerId, opts) {
       if (githubToken && fs.existsSync(bareRepoPath)) {
         const cloneUrl = `https://${githubToken}@github.com/${repo}.git`;
         try {
+          // Always fetch defaultBranch so restored containers get latest-main
           await new Promise((resolve) => {
-            exec(`cd "${bareRepoPath}" && git remote set-url origin "${cloneUrl}" && git fetch origin ${branch}`, { timeout: 60000 }, (err) => {
-              if (err) console.warn(`Bare cache update failed: ${err.message}`);
+            exec(`cd "${bareRepoPath}" && git remote set-url origin "${cloneUrl}" && git fetch origin ${defaultBranch}`, { timeout: 60000 }, (err) => {
+              if (err) console.warn(`Bare cache default branch update failed: ${err.message}`);
               resolve();
             });
           });
+          if (branch !== defaultBranch) {
+            await new Promise((resolve) => {
+              exec(`cd "${bareRepoPath}" && git fetch origin ${branch}`, { timeout: 60000 }, (err) => {
+                if (err) console.warn(`Bare cache branch update failed: ${err.message}`);
+                resolve();
+              });
+            });
+          }
         } catch (err) {
           console.warn(`Bare cache update error: ${err.message}`);
         }
       }
 
+      // Fetch latest default branch, then reset to target branch (or default if target is new)
       await execInContainer(container,
-        `cd /app && git remote set-url origin ${remotePath} 2>/dev/null; git fetch --depth 1 origin ${branch} 2>/dev/null && git reset --hard origin/${branch} 2>/dev/null`,
+        `cd /app && git remote set-url origin ${remotePath} 2>/dev/null; git fetch --depth 1 origin ${defaultBranch} 2>/dev/null; git fetch --depth 1 origin ${branch} 2>/dev/null && git reset --hard origin/${branch} 2>/dev/null || git reset --hard origin/${defaultBranch} 2>/dev/null`,
         30000
       );
       await writeBuildLog('git_update', 'Pulled latest changes');
@@ -511,12 +560,18 @@ async function runSetup(containerId, opts) {
             });
           });
         } else {
+          // Always fetch defaultBranch so new conversations get latest-main
           await new Promise((resolve, reject) => {
-            exec(`cd "${bareRepoPath}" && git remote set-url origin "${cloneUrl}" && git fetch origin ${branch}`, { timeout: 60000 }, (err) => {
+            exec(`cd "${bareRepoPath}" && git remote set-url origin "${cloneUrl}" && git fetch origin ${defaultBranch}`, { timeout: 60000 }, (err) => {
               if (err) reject(err);
               else resolve();
             });
           });
+          if (branch !== defaultBranch) {
+            await new Promise((resolve) => {
+              exec(`cd "${bareRepoPath}" && git fetch origin ${branch}`, { timeout: 60000 }, () => resolve());
+            });
+          }
         }
       }),
       execInContainer(container, `test -d /app/.git && echo EXISTS || echo MISSING`, 5000),
@@ -678,6 +733,7 @@ app.post('/api/containers/:id/exec', authMiddleware, async (req, res) => {
   try {
     const { command, timeout = 60000 } = req.body;
     const container = docker.getContainer(req.params.id);
+    await ensureRunning(container);
 
     const result = await execInContainer(container, command, timeout);
     res.json(result);
@@ -694,6 +750,14 @@ app.delete('/api/containers/:id', authMiddleware, async (req, res) => {
   try {
     const container = docker.getContainer(req.params.id);
     
+    // Clean up proxy key before removing
+    try {
+      const info = await container.inspect();
+      const ip = info.NetworkSettings?.IPAddress;
+      if (ip) proxyKeysByIp.delete(ip);
+      if (info.State?.Paused) await container.unpause();
+    } catch (_) {}
+
     try {
       await container.stop({ t: 5 });
     } catch (e) {
@@ -726,6 +790,7 @@ app.get('/api/containers/:id/logs', async (req, res) => {
   const container = docker.getContainer(req.params.id);
 
   try {
+    await ensureRunning(container);
     const logExec = await container.exec({
       Cmd: ['sh', '-c', 'test -f /tmp/composure-build.log && tail -n 200 -F /tmp/composure-build.log || (echo "Waiting for build log..." && sleep 2 && tail -n 200 -F /tmp/composure-build.log)'],
       AttachStdout: true,
@@ -788,6 +853,7 @@ app.post('/api/containers/:id/checkpoint', authMiddleware, async (req, res) => {
         repo: checkpointName,
         tag: 'latest',
         comment: `Checkpoint of container ${containerId}`,
+        pause: false,
       });
 
       console.log(`Checkpoint image created: ${imageTag} from container ${containerId}`);
@@ -941,6 +1007,38 @@ function validateCallbackSecret(containerId, secret) {
   return containerSecrets.get(containerId) === secret;
 }
 
+// Register a per-container Anthropic API key (keyed by container IP for proxy lookup)
+app.post('/api/proxy-keys/:id', authMiddleware, async (req, res) => {
+  const { apiKey } = req.body;
+  if (!apiKey) return res.status(400).json({ error: 'apiKey is required' });
+  try {
+    const container = docker.getContainer(req.params.id);
+    const info = await container.inspect();
+    const ip = info.NetworkSettings?.IPAddress;
+    if (ip) {
+      proxyKeysByIp.set(ip, apiKey);
+      console.log(`Proxy key registered for container ${req.params.id} (${ip})`);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Deregister a per-container Anthropic API key
+app.delete('/api/proxy-keys/:id', authMiddleware, async (req, res) => {
+  try {
+    const container = docker.getContainer(req.params.id);
+    const info = await container.inspect();
+    const ip = info.NetworkSettings?.IPAddress;
+    if (ip) proxyKeysByIp.delete(ip);
+    res.json({ success: true });
+  } catch (err) {
+    // Container may already be gone — just clean up from map by scanning
+    res.json({ success: true });
+  }
+});
+
 // Create HTTP server and WebSocket server
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
@@ -979,6 +1077,7 @@ wss.on('connection', async (ws, request) => {
   const container = docker.getContainer(containerId);
 
   try {
+    await ensureRunning(container);
     const exec = await container.exec({
       Cmd: ['/bin/bash'],
       AttachStdin: true,
@@ -1013,9 +1112,52 @@ wss.on('connection', async (ws, request) => {
   }
 });
 
+// Anthropic API reverse proxy (port 8082).
+// Containers set ANTHROPIC_BASE_URL=http://172.17.0.1:8082 and a dummy API key.
+// This proxy replaces the key with the real one and forwards to api.anthropic.com.
+const proxyServer = http.createServer((req, res) => {
+  const sourceIp = req.socket.remoteAddress?.replace(/^::ffff:/, '');
+  const realKey = proxyKeysByIp.get(sourceIp) || ANTHROPIC_API_KEY;
+
+  if (!realKey) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'No Anthropic API key configured' }));
+    return;
+  }
+
+  const upstreamHeaders = { ...req.headers };
+  upstreamHeaders['x-api-key'] = realKey;
+  delete upstreamHeaders['host'];
+  upstreamHeaders['host'] = 'api.anthropic.com';
+
+  const upstreamReq = https.request({
+    hostname: 'api.anthropic.com',
+    port: 443,
+    path: req.url,
+    method: req.method,
+    headers: upstreamHeaders,
+  }, (upstreamRes) => {
+    res.writeHead(upstreamRes.statusCode, upstreamRes.headers);
+    upstreamRes.pipe(res);
+  });
+
+  upstreamReq.on('error', (err) => {
+    console.error('Anthropic proxy error:', err.message);
+    if (!res.headersSent) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Upstream request failed' }));
+    }
+  });
+
+  req.pipe(upstreamReq);
+});
+
 initPortAllocator().then(() => {
   server.listen(PORT, () => {
     console.log(`Docker Manager API listening on port ${PORT}`);
+  });
+  proxyServer.listen(PROXY_PORT, '172.17.0.1', () => {
+    console.log(`Anthropic API proxy listening on 172.17.0.1:${PROXY_PORT} (Docker bridge only)`);
   });
 });
 APISERVER
@@ -1073,8 +1215,9 @@ sleep 3
 # Check service status
 systemctl status docker-manager --no-pager
 
-# Test API
+# Test APIs
 curl -s http://localhost:8081/health | jq .
+echo "Anthropic proxy on port 8082: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/health 2>/dev/null || echo 'running')"
 
 echo "=== Docker Manager API deployed ==="
 
@@ -1085,9 +1228,10 @@ echo ""
 echo -e "${GREEN}=== Deployment Complete ===${NC}"
 echo ""
 echo "API URL: http://$DOCKER_HOST_IP:8081"
+echo "Anthropic Proxy: http://$DOCKER_HOST_IP:8082 (containers access via 172.17.0.1:8082)"
 echo ""
 echo "API Secret (add to Convex environment as DOCKER_API_SECRET):"
-ssh root@"$DOCKER_HOST_IP" 'cat /opt/docker-manager/.env | cut -d= -f2'
+ssh root@"$DOCKER_HOST_IP" 'cat /opt/docker-manager/.env | grep API_SECRET | cut -d= -f2'
 echo ""
 echo "Test the API:"
 echo "  curl http://$DOCKER_HOST_IP:8081/health"
@@ -1096,3 +1240,6 @@ echo "Add to Convex environment variables:"
 echo "  DOCKER_HOST=$DOCKER_HOST_IP"
 echo "  DOCKER_HOST_URL=http://$DOCKER_HOST_IP:8081"
 echo "  DOCKER_API_SECRET=<secret_above>"
+echo ""
+echo "Add ANTHROPIC_API_KEY to /opt/docker-manager/.env on the host for the proxy:"
+echo "  ssh root@$DOCKER_HOST_IP 'echo \"ANTHROPIC_API_KEY=sk-ant-...\" >> /opt/docker-manager/.env && systemctl restart docker-manager'"

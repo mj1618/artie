@@ -36,7 +36,7 @@ export function ChatPanel({
   >([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const applyingFileChangeRef = useRef<string | null>(null);
+
   const { toast } = useToast();
 
   const createSession = useMutation(api.sessions.create);
@@ -49,12 +49,7 @@ export function ChatPanel({
   const markFailed = useMutation(api.fileChanges.markFailed);
   const clearFileChangeError = useMutation(api.fileChanges.clearError);
 
-  const applyFileChangesToDocker = useAction(api.dockerFiles.applyFileChanges);
 
-  const dockerContainer = useQuery(
-    api.dockerContainers.getForSession,
-    sessionId ? { sessionId } : "skip",
-  );
   
   const messages = useQuery(
     api.messages.list,
@@ -84,46 +79,8 @@ export function ChatPanel({
     setSessionId(initialSessionId);
   }, [initialSessionId]);
 
-  // Apply file changes to Docker container when they arrive
-  useEffect(() => {
-    if (!latestChange || latestChange.applied || latestChange.reverted || latestChange.error) return;
-    if (dockerContainer === undefined) return;
-
-    if (applyingFileChangeRef.current === latestChange._id) return;
-    applyingFileChangeRef.current = latestChange._id;
-
-    async function applyChanges() {
-      const useDockerRuntime =
-        dockerContainer &&
-        (dockerContainer.status === "ready" || dockerContainer.status === "active");
-
-      try {
-        if (useDockerRuntime && dockerContainer) {
-          const result = await applyFileChangesToDocker({
-            containerId: dockerContainer._id,
-            fileChangeId: latestChange!._id,
-          });
-          if (!result.success) {
-            throw new Error(result.error || "Failed to apply changes to Docker container");
-          }
-        }
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
-        console.error("Failed to apply file changes:", err);
-        toast({
-          type: "error",
-          message: `Failed to apply changes to the preview: ${errorMsg}`,
-        });
-        await markFailed({
-          fileChangeId: latestChange!._id,
-          error: errorMsg,
-        }).catch(() => {});
-        applyingFileChangeRef.current = null;
-      }
-    }
-
-    applyChanges();
-  }, [latestChange, markFailed, toast, dockerContainer, applyFileChangesToDocker]);
+  // File changes are applied to the Particle VM by the AI action (applyFilesToRuntime).
+  // No separate frontend apply needed.
 
   const retryApplyChanges = async (fileChangeId: Id<"fileChanges">) => {
     try {

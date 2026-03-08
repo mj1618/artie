@@ -1,14 +1,15 @@
 "use client";
 
 import { Id } from "../../../convex/_generated/dataModel";
-import { DockerPreview } from "./DockerPreview";
+import { ParticlePreview } from "./ParticlePreview";
 
 interface PreviewPanelProps {
   repoId: Id<"repos">;
   sessionId: Id<"sessions"> | null;
   branch?: string;
+  runtime?: string;
 }
 
 export function PreviewPanel({ repoId, sessionId, branch }: PreviewPanelProps) {
-  return <DockerPreview repoId={repoId} sessionId={sessionId} branch={branch} />;
+  return <ParticlePreview repoId={repoId} sessionId={sessionId} branch={branch} />;
 }
