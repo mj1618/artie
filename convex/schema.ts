@@ -210,4 +210,12 @@ export default defineSchema({
     .index("by_particleName", ["particleName"])
     .index("by_status", ["status"])
     .index("by_status_and_statusChangedAt", ["status", "statusChangedAt"]),
+
+  // Particle templates - stopped particles kept for fast duplication
+  particleTemplates: defineTable({
+    repoId: v.id("repos"),
+    particleName: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_repoId", ["repoId"]),
 });

@@ -69,8 +69,9 @@ function generateParticleName(repoName: string): string {
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 20);
+    .slice(0, 11);
   const random = Math.random().toString(36).substring(2, 10);
+  // Max: "composure-" (10) + sanitized (11) + "-" (1) + random (8) = 30
   return `composure-${sanitized}-${random}`;
 }
 
@@ -698,6 +699,142 @@ export const updateBuildLog = internalMutation({
 });
 
 // ====================
+// TEMPLATE QUERIES & MUTATIONS
+// ====================
+
+export const getTemplateForRepo = internalQuery({
+  args: { repoId: v.id("repos") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("particleTemplates")
+      .withIndex("by_repoId", (q) => q.eq("repoId", args.repoId))
+      .first();
+  },
+});
+
+export const saveTemplate = internalMutation({
+  args: {
+    repoId: v.id("repos"),
+    particleName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Delete any existing template for this repo
+    const existing = await ctx.db
+      .query("particleTemplates")
+      .withIndex("by_repoId", (q) => q.eq("repoId", args.repoId))
+      .collect();
+    for (const tmpl of existing) {
+      await ctx.db.delete("particleTemplates", tmpl._id);
+    }
+
+    await ctx.db.insert("particleTemplates", {
+      repoId: args.repoId,
+      particleName: args.particleName,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const deleteTemplate = internalMutation({
+  args: { repoId: v.id("repos") },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("particleTemplates")
+      .withIndex("by_repoId", (q) => q.eq("repoId", args.repoId))
+      .collect();
+    for (const tmpl of existing) {
+      await ctx.db.delete("particleTemplates", tmpl._id);
+    }
+  },
+});
+
+export const getTemplateStatus = query({
+  args: { repoId: v.id("repos") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const template = await ctx.db
+      .query("particleTemplates")
+      .withIndex("by_repoId", (q) => q.eq("repoId", args.repoId))
+      .first();
+
+    if (!template) return null;
+    return {
+      particleName: template.particleName,
+      createdAt: template.createdAt,
+    };
+  },
+});
+
+export const requestCreateTemplate = mutation({
+  args: { repoId: v.id("repos") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const repo = await ctx.db.get("repos", args.repoId);
+    if (!repo) throw new Error("Repository not found");
+
+    const team = await ctx.db.get("teams", repo.teamId);
+    if (!team || team.ownerId !== userId) throw new Error("Not authorized");
+
+    // Find an active/ready particle for this repo to snapshot from
+    const particles = await ctx.db
+      .query("particles")
+      .withIndex("by_repoId", (q) => q.eq("repoId", args.repoId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "ready"),
+          q.eq(q.field("status"), "active")
+        )
+      )
+      .collect();
+
+    if (particles.length === 0) {
+      throw new Error("No active environment found. Start a session first, then create a snapshot.");
+    }
+
+    const sourceParticle = particles.sort((a, b) => b.createdAt - a.createdAt)[0];
+
+    await ctx.scheduler.runAfter(0, internal.particles.createTemplate, {
+      sourceParticleName: sourceParticle.particleName,
+      repoId: args.repoId,
+    });
+
+    return { sourceParticleName: sourceParticle.particleName };
+  },
+});
+
+export const requestDeleteTemplate = mutation({
+  args: { repoId: v.id("repos") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const repo = await ctx.db.get("repos", args.repoId);
+    if (!repo) throw new Error("Repository not found");
+
+    const team = await ctx.db.get("teams", repo.teamId);
+    if (!team || team.ownerId !== userId) throw new Error("Not authorized");
+
+    const template = await ctx.db
+      .query("particleTemplates")
+      .withIndex("by_repoId", (q) => q.eq("repoId", args.repoId))
+      .first();
+
+    if (!template) return;
+
+    // Schedule deletion of the template particle from the API
+    await ctx.scheduler.runAfter(0, internal.particles.deleteTemplateParticle, {
+      particleName: template.particleName,
+    });
+
+    await ctx.db.delete("particleTemplates", template._id);
+  },
+});
+
+// ====================
 // ACTIONS
 // ====================
 
@@ -852,8 +989,102 @@ export const createParticle = internalAction({
       });
     }
 
+    // Check for a template particle to duplicate from
+    const template = await ctx.runQuery(internal.particles.getTemplateForRepo, {
+      repoId: particle.repoId,
+    });
+
+    let fromTemplate = false;
+
+    if (template) {
+      console.log(`[createParticle] Found template ${template.particleName} for repo, attempting duplicate`);
+
+      try {
+        const dupResponse = await fetch(
+          `${PARTICLE_API_URL}/v1/particles/${template.particleName}/duplicate`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name: particle.particleName }),
+          },
+        );
+
+        if (dupResponse.ok) {
+          console.log(`[createParticle] Successfully duplicated from template ${template.particleName}`);
+          fromTemplate = true;
+
+          const accountId = process.env.PARTICLE_ACCOUNT_ID;
+          const accountPrefix = accountId ? `-${accountId.slice(0, 8)}` : "";
+          const previewUrl = `https://${particle.particleName}${accountPrefix}.runparticle.com`;
+
+          const statusResult = await ctx.runMutation(internal.particles.updateStatus, {
+            particleId: args.particleId,
+            status: "cloning",
+            updates: { previewUrl },
+            reason: "duplicated_from_template",
+          });
+
+          if (!statusResult?.success) {
+            console.error(`[createParticle] Failed to transition to cloning after duplicate: ${statusResult?.error}`);
+            try {
+              await fetch(`${PARTICLE_API_URL}/v1/particles/${particle.particleName}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${apiKey}` },
+              });
+            } catch { }
+            return;
+          }
+
+          // Start the duplicated particle (it's stopped after duplication)
+          await fetch(`${PARTICLE_API_URL}/v1/particles/${particle.particleName}/start`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+
+          // Set HTTP port to 3000 for Next.js dev server
+          await fetch(`${PARTICLE_API_URL}/v1/particles/${particle.particleName}/port`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ http_port: 3000 }),
+          });
+
+          // Set idle policy to sleep with wake-on-http
+          await fetch(`${PARTICLE_API_URL}/v1/particles/${particle.particleName}/idle`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ policy: "sleep" }),
+          });
+
+          await ctx.scheduler.runAfter(0, internal.particles.setupParticle, {
+            particleId: args.particleId,
+            githubToken,
+            resolvedBranch,
+            fromTemplate: true,
+          });
+          return;
+        } else {
+          const error = await dupResponse.text();
+          console.warn(`[createParticle] Template duplicate failed (${dupResponse.status}): ${error}, falling back to fresh creation`);
+          // Delete stale template record
+          await ctx.runMutation(internal.particles.deleteTemplate, { repoId: particle.repoId });
+        }
+      } catch (err) {
+        console.warn(`[createParticle] Template duplicate error: ${err instanceof Error ? err.message : "unknown"}, falling back to fresh creation`);
+        await ctx.runMutation(internal.particles.deleteTemplate, { repoId: particle.repoId });
+      }
+    }
+
     try {
-      // Create particle via API
+      // Create particle from scratch
       const createResponse = await fetch(`${PARTICLE_API_URL}/v1/particles`, {
         method: "POST",
         headers: {
@@ -897,7 +1128,9 @@ export const createParticle = internalAction({
       }
 
       const particleData = await createResponse.json();
-      const previewUrl = `https://${particle.particleName}.runparticle.com`;
+      const accountId = process.env.PARTICLE_ACCOUNT_ID;
+      const accountPrefix = accountId ? `-${accountId.slice(0, 8)}` : "";
+      const previewUrl = `https://${particle.particleName}${accountPrefix}.runparticle.com`;
 
       const statusResult = await ctx.runMutation(internal.particles.updateStatus, {
         particleId: args.particleId,
@@ -939,12 +1172,13 @@ export const createParticle = internalAction({
         body: JSON.stringify({ policy: "sleep" }),
       });
 
-      console.log(`[createParticle] Particle created, proceeding to setup`);
+      console.log(`[createParticle] Particle created from scratch, proceeding to setup`);
 
       await ctx.scheduler.runAfter(0, internal.particles.setupParticle, {
         particleId: args.particleId,
         githubToken,
         resolvedBranch,
+        fromTemplate: false,
       });
 
     } catch (err) {
@@ -978,9 +1212,11 @@ export const setupParticle = internalAction({
     particleId: v.id("particles"),
     githubToken: v.string(),
     resolvedBranch: v.string(),
+    fromTemplate: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    console.log(`[setupParticle] Starting for particle ${args.particleId}`);
+    const isFromTemplate = args.fromTemplate === true;
+    console.log(`[setupParticle] Starting for particle ${args.particleId} (fromTemplate: ${isFromTemplate})`);
 
     const particle = await ctx.runQuery(internal.particles.getByIdInternal, {
       particleId: args.particleId,
@@ -1049,87 +1285,268 @@ export const setupParticle = internalAction({
 
       buildLog += `[${new Date().toISOString()}] VM is ready.\n`;
 
-      // Install Node.js (particles come with Ubuntu, need to install Node)
-      buildLog += `[${new Date().toISOString()}] Installing Node.js...\n`;
-      await ctx.runMutation(internal.particles.updateBuildLog, {
-        particleId: args.particleId,
-        buildLog,
-      });
+      if (!isFromTemplate) {
+        // === FROM SCRATCH: full setup, then auto-snapshot ===
 
-      const nodeInstallResult = await execInParticle(
-        particleName,
-        `bash -c 'set -e; if which node >/dev/null 2>&1; then node --version; else curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs; fi && node --version && npm --version'`,
-        apiKey,
-        120000,
-      );
-      buildLog += nodeInstallResult.output + "\n";
-      await ctx.runMutation(internal.particles.updateBuildLog, {
-        particleId: args.particleId,
-        buildLog,
-      });
+        // Install Node.js (particles come with Ubuntu, need to install Node)
+        buildLog += `[${new Date().toISOString()}] Installing Node.js...\n`;
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
 
-      if (nodeInstallResult.exitCode !== 0) {
-        throw new Error(`Node.js installation failed (exit ${nodeInstallResult.exitCode}): ${nodeInstallResult.output.slice(-500)}`);
+        const nodeInstallResult = await execInParticle(
+          particleName,
+          `bash -c 'set -e; if which node >/dev/null 2>&1; then node --version; else curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs; fi && node --version && npm --version'`,
+          apiKey,
+          120000,
+        );
+        buildLog += nodeInstallResult.output + "\n";
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
+
+        if (nodeInstallResult.exitCode !== 0) {
+          throw new Error(`Node.js installation failed (exit ${nodeInstallResult.exitCode}): ${nodeInstallResult.output.slice(-500)}`);
+        }
+
+        // Clone repository on default branch (template base)
+        buildLog += `[${new Date().toISOString()}] Cloning repository...\n`;
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
+
+        const cloneUrl = `https://x-access-token:${args.githubToken}@github.com/${repo.githubOwner}/${repo.githubRepo}.git`;
+        const cloneCmd = `bash -c 'rm -rf /app && GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch '"'"'${repo.defaultBranch}'"'"' '"'"'${cloneUrl}'"'"' /app 2>&1'`;
+        const cloneResult = await execInParticle(particleName, cloneCmd, apiKey, TIMEOUTS.cloning);
+
+        const cleanOutput = cloneResult.output
+          .replace(/[\x00-\x1F\x7F]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .replace(/x-access-token:[^@\s]+@/g, 'x-access-token:***@')
+          .trim();
+
+        buildLog += cleanOutput + "\n";
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
+
+        if (cloneResult.exitCode !== 0) {
+          throw new Error(`Clone failed (exit ${cloneResult.exitCode}): ${cleanOutput || 'No output captured'}`);
+        }
+
+        await ctx.runMutation(internal.particles.updateStatus, {
+          particleId: args.particleId,
+          status: "installing",
+          updates: { buildLog },
+          reason: "clone_complete",
+        });
+
+        // Install dependencies
+        buildLog += `[${new Date().toISOString()}] Installing dependencies...\n`;
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
+
+        const installResult = await execInParticle(
+          particleName,
+          `bash -c 'cd /app && npm install 2>&1'`,
+          apiKey,
+          TIMEOUTS.installing,
+        );
+        buildLog += installResult.output + "\n";
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
+
+        if (installResult.exitCode !== 0) {
+          throw new Error(`Install failed (exit ${installResult.exitCode}): ${installResult.output.slice(-500)}`);
+        }
+
+        // Auto-create template snapshot
+        buildLog += `[${new Date().toISOString()}] Creating environment snapshot...\n`;
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
+
+        try {
+          // Stop the particle for snapshotting
+          const stopResponse = await fetch(
+            `${PARTICLE_API_URL}/v1/particles/${particleName}/stop`,
+            {
+              method: "POST",
+              headers: { Authorization: `Bearer ${apiKey}` },
+            },
+          );
+
+          if (stopResponse.ok || stopResponse.status === 409) {
+            // Poll until the particle is actually stopped (exec fails)
+            for (let stopAttempt = 0; stopAttempt < 30; stopAttempt++) {
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              const pingResult = await execInParticle(particleName, "echo OK", apiKey, 5000);
+              if (pingResult.exitCode !== 0 || !pingResult.output.includes("OK")) {
+                break;
+              }
+            }
+
+            const randomSuffix = crypto.randomUUID().replace(/-/g, "").substring(0, 12);
+            const templateName = `template-${randomSuffix}`;
+
+            // Delete old template if exists
+            const existingTemplate = await ctx.runQuery(internal.particles.getTemplateForRepo, {
+              repoId: particle.repoId,
+            });
+            if (existingTemplate) {
+              await fetch(`${PARTICLE_API_URL}/v1/particles/${existingTemplate.particleName}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${apiKey}` },
+              }).catch(() => {});
+            }
+
+            // Duplicate as template
+            console.log(`[setupParticle] Duplicating particle "${particleName}" (${particleName.length} chars) -> "${templateName}" (${templateName.length} chars)`);
+            const dupResponse = await fetch(
+              `${PARTICLE_API_URL}/v1/particles/${particleName}/duplicate`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ name: templateName }),
+              },
+            );
+
+            if (dupResponse.ok) {
+              await ctx.runMutation(internal.particles.saveTemplate, {
+                repoId: particle.repoId,
+                particleName: templateName,
+              });
+              buildLog += `[${new Date().toISOString()}] Snapshot created.\n`;
+            } else {
+              const error = await dupResponse.text();
+              console.warn(`[setupParticle] Auto-snapshot duplicate failed (${dupResponse.status}): ${error}`);
+              buildLog += `[${new Date().toISOString()}] Snapshot failed (${dupResponse.status}: ${error.slice(0, 200)}), continuing without template.\n`;
+            }
+          } else {
+            const stopError = await stopResponse.text().catch(() => "");
+            console.warn(`[setupParticle] Auto-snapshot stop failed (${stopResponse.status}): ${stopError}`);
+            buildLog += `[${new Date().toISOString()}] Snapshot failed: stop returned ${stopResponse.status} (${stopError.slice(0, 200)}), continuing without template.\n`;
+          }
+
+          // Start the particle back up
+          await fetch(`${PARTICLE_API_URL}/v1/particles/${particleName}/start`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+
+          // Wait for particle to be reachable again after restart
+          let reachable = false;
+          for (let attempt = 0; attempt < 15; attempt++) {
+            const pingResult = await execInParticle(particleName, "echo OK", apiKey, 10000);
+            if (pingResult.exitCode === 0 && pingResult.output.includes("OK")) {
+              reachable = true;
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+          if (!reachable) {
+            throw new Error("Particle VM not reachable after snapshot restart");
+          }
+        } catch (snapshotErr) {
+          // If snapshot fails, try to start particle back up and continue
+          console.error(`[setupParticle] Auto-snapshot error: ${snapshotErr instanceof Error ? snapshotErr.message : "unknown"}`);
+          buildLog += `[${new Date().toISOString()}] Snapshot error, continuing setup.\n`;
+          await fetch(`${PARTICLE_API_URL}/v1/particles/${particleName}/start`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}` },
+          }).catch(() => {});
+
+          // Wait for particle to be reachable
+          for (let attempt = 0; attempt < 15; attempt++) {
+            const pingResult = await execInParticle(particleName, "echo OK", apiKey, 10000);
+            if (pingResult.exitCode === 0 && pingResult.output.includes("OK")) break;
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        }
+
+        await ctx.runMutation(internal.particles.updateBuildLog, {
+          particleId: args.particleId,
+          buildLog,
+        });
       }
 
-      // Clone repository
-      buildLog += `[${new Date().toISOString()}] Cloning repository...\n`;
+      // === TEMPLATE PATH: git fetch + checkout branch (runs for both from-template and after auto-snapshot) ===
+      buildLog += `[${new Date().toISOString()}] Fetching latest code...\n`;
       await ctx.runMutation(internal.particles.updateBuildLog, {
         particleId: args.particleId,
         buildLog,
       });
 
+      // Unshallow the clone and set up the remote with a fresh token
       const cloneUrl = `https://x-access-token:${args.githubToken}@github.com/${repo.githubOwner}/${repo.githubRepo}.git`;
-      const cloneCmd = `bash -c 'rm -rf /app && GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch '"'"'${args.resolvedBranch}'"'"' '"'"'${cloneUrl}'"'"' /app 2>&1'`;
-      const cloneResult = await execInParticle(particleName, cloneCmd, apiKey, TIMEOUTS.cloning);
+      const fetchCmd = `bash -c 'cd /app && git remote set-url origin '"'"'${cloneUrl}'"'"' && git fetch --unshallow origin 2>&1 || git fetch origin 2>&1'`;
+      const fetchResult = await execInParticle(particleName, fetchCmd, apiKey, TIMEOUTS.cloning);
 
-      const cleanOutput = cloneResult.output
-        .replace(/[\x00-\x1F\x7F]/g, ' ')
-        .replace(/\s+/g, ' ')
+      const cleanFetchOutput = fetchResult.output
         .replace(/x-access-token:[^@\s]+@/g, 'x-access-token:***@')
         .trim();
+      buildLog += cleanFetchOutput + "\n";
 
-      buildLog += cleanOutput + "\n";
-      await ctx.runMutation(internal.particles.updateBuildLog, {
-        particleId: args.particleId,
-        buildLog,
-      });
+      if (fetchResult.exitCode !== 0) {
+        throw new Error(`Git fetch failed (exit ${fetchResult.exitCode}): ${cleanFetchOutput}`);
+      }
 
-      if (cloneResult.exitCode !== 0) {
-        throw new Error(`Clone failed (exit ${cloneResult.exitCode}): ${cleanOutput || 'No output captured'}`);
+      // Checkout the target branch (create from default branch if it doesn't exist on remote)
+      const checkoutCmd = `bash -c 'cd /app && (git checkout -B '"'"'${args.resolvedBranch}'"'"' '"'"'origin/${args.resolvedBranch}'"'"' 2>&1 || git checkout -b '"'"'${args.resolvedBranch}'"'"' '"'"'origin/${repo.defaultBranch}'"'"' 2>&1)'`;
+      const checkoutResult = await execInParticle(particleName, checkoutCmd, apiKey, 30000);
+
+      const cleanCheckoutOutput = checkoutResult.output
+        .replace(/x-access-token:[^@\s]+@/g, 'x-access-token:***@')
+        .trim();
+      buildLog += cleanCheckoutOutput + "\n";
+
+      if (checkoutResult.exitCode !== 0) {
+        throw new Error(`Git checkout failed (exit ${checkoutResult.exitCode}): ${cleanCheckoutOutput}`);
       }
 
       await ctx.runMutation(internal.particles.updateStatus, {
         particleId: args.particleId,
         status: "installing",
         updates: { buildLog },
-        reason: "clone_complete",
+        reason: "fetch_complete",
       });
 
-      // Install dependencies
-      buildLog += `[${new Date().toISOString()}] Installing dependencies...\n`;
+      // Run incremental npm install
+      buildLog += `[${new Date().toISOString()}] Running npm install...\n`;
       await ctx.runMutation(internal.particles.updateBuildLog, {
         particleId: args.particleId,
         buildLog,
       });
 
-      const installResult = await execInParticle(
+      const npmInstallResult = await execInParticle(
         particleName,
         `bash -c 'cd /app && npm install 2>&1'`,
         apiKey,
         TIMEOUTS.installing,
       );
-      buildLog += installResult.output + "\n";
+      buildLog += npmInstallResult.output + "\n";
       await ctx.runMutation(internal.particles.updateBuildLog, {
         particleId: args.particleId,
         buildLog,
       });
 
-      if (installResult.exitCode !== 0) {
-        throw new Error(`Install failed (exit ${installResult.exitCode}): ${installResult.output.slice(-500)}`);
+      if (npmInstallResult.exitCode !== 0) {
+        throw new Error(`Install failed (exit ${npmInstallResult.exitCode}): ${npmInstallResult.output.slice(-500)}`);
       }
 
-      // Install Claude Code
+      // Install Claude Code (both paths)
       buildLog += `[${new Date().toISOString()}] Checking Claude Code...\n`;
       await ctx.runMutation(internal.particles.updateBuildLog, {
         particleId: args.particleId,
@@ -1166,7 +1583,7 @@ export const setupParticle = internalAction({
         buildLog,
       });
 
-      // Write env vars
+      // Write env vars (both paths - env vars may have changed)
       if (repo.envVars && repo.envVars.length > 0) {
         buildLog += `[${new Date().toISOString()}] Writing .env file...\n`;
         const envContent = repo.envVars
@@ -1303,6 +1720,123 @@ export const setupParticle = internalAction({
         updates: { errorMessage: message, buildLog },
         reason: "setup_failed",
       });
+    }
+  },
+});
+
+export const deleteTemplateParticle = internalAction({
+  args: { particleName: v.string() },
+  handler: async (ctx, args) => {
+    const apiKey = process.env.PARTICLE_API_KEY;
+    if (!apiKey) return;
+
+    try {
+      await fetch(`${PARTICLE_API_URL}/v1/particles/${args.particleName}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      console.log(`[deleteTemplateParticle] Deleted template particle ${args.particleName}`);
+    } catch (err) {
+      console.error(`[deleteTemplateParticle] Error: ${err instanceof Error ? err.message : "unknown"}`);
+    }
+  },
+});
+
+export const createTemplate = internalAction({
+  args: {
+    sourceParticleName: v.string(),
+    repoId: v.id("repos"),
+  },
+  handler: async (ctx, args) => {
+    const apiKey = process.env.PARTICLE_API_KEY;
+    if (!apiKey) {
+      console.error(`[createTemplate] PARTICLE_API_KEY not configured`);
+      return;
+    }
+
+    // Check if a template already exists for this repo
+    const existing = await ctx.runQuery(internal.particles.getTemplateForRepo, {
+      repoId: args.repoId,
+    });
+
+    // Delete old template particle if it exists
+    if (existing) {
+      console.log(`[createTemplate] Deleting old template ${existing.particleName}`);
+      await fetch(`${PARTICLE_API_URL}/v1/particles/${existing.particleName}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      }).catch(() => {});
+    }
+
+    const randomSuffix = crypto.randomUUID().replace(/-/g, "").substring(0, 12);
+    const templateName = `template-${randomSuffix}`;
+
+    try {
+      // Stop the source particle so we can duplicate it
+      console.log(`[createTemplate] Stopping source particle ${args.sourceParticleName} for duplication`);
+      const stopResponse = await fetch(
+        `${PARTICLE_API_URL}/v1/particles/${args.sourceParticleName}/stop`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+        },
+      );
+
+      if (!stopResponse.ok && stopResponse.status !== 409) {
+        const error = await stopResponse.text();
+        console.error(`[createTemplate] Failed to stop source (${stopResponse.status}): ${error}`);
+        return;
+      }
+
+      // Wait briefly for the particle to fully stop
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Duplicate the stopped particle to create the template
+      console.log(`[createTemplate] Duplicating ${args.sourceParticleName} -> ${templateName}`);
+      const dupResponse = await fetch(
+        `${PARTICLE_API_URL}/v1/particles/${args.sourceParticleName}/duplicate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: templateName }),
+        },
+      );
+
+      if (!dupResponse.ok) {
+        const error = await dupResponse.text();
+        console.error(`[createTemplate] Duplicate failed (${dupResponse.status}): ${error}`);
+        // Start the source back up regardless
+        await fetch(`${PARTICLE_API_URL}/v1/particles/${args.sourceParticleName}/start`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        return;
+      }
+
+      // Start the source particle back up immediately
+      console.log(`[createTemplate] Starting source particle ${args.sourceParticleName} back up`);
+      await fetch(`${PARTICLE_API_URL}/v1/particles/${args.sourceParticleName}/start`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      // Save the template record (template particle stays stopped)
+      await ctx.runMutation(internal.particles.saveTemplate, {
+        repoId: args.repoId,
+        particleName: templateName,
+      });
+
+      console.log(`[createTemplate] Template ${templateName} created for repo ${args.repoId}`);
+    } catch (err) {
+      console.error(`[createTemplate] Error: ${err instanceof Error ? err.message : "unknown"}`);
+      // Make sure source particle is started back up
+      await fetch(`${PARTICLE_API_URL}/v1/particles/${args.sourceParticleName}/start`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+      }).catch(() => {});
     }
   },
 });

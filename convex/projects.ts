@@ -240,6 +240,21 @@ export const migrateAllToFirecracker = internalMutation({
   },
 });
 
+export const migrateAllToParticle = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const allRepos = await ctx.db.query("repos").collect();
+    let updated = 0;
+    for (const repo of allRepos) {
+      if (repo.runtime !== "particle") {
+        await ctx.db.patch("repos", repo._id, { runtime: "particle" });
+        updated++;
+      }
+    }
+    return { total: allRepos.length, updated };
+  },
+});
+
 // Internal: find repo by GitHub name (for CLI testing)
 export const findRepoByGithubName = internalQuery({
   args: { githubRepo: v.string() },

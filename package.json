@@ -6,9 +6,7 @@
     "dev": "next dev",
     "dev:next": "next dev",
     "dev:convex": "convex dev",
-    "prebuild": "mkdir -p ./builds/${BUILD_ID}/cache && [ -d .next-cache ] && cp -r .next-cache/* ./builds/${BUILD_ID}/cache/ 2>/dev/null || true",
     "build": "BUILD_DIR=./builds/${BUILD_ID} next build",
-    "postbuild": "mkdir -p .next-cache && cp -r ./builds/${BUILD_ID}/cache/* .next-cache/ 2>/dev/null || true && cp -r ./builds/${BUILD_ID}/static ./builds/${BUILD_ID}/standalone/builds/${BUILD_ID}/static && cp -r ./public ./builds/${BUILD_ID}/standalone/public",
     "start": "next start",
     "lint": "eslint"
   },

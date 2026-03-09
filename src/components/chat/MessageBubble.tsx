@@ -6,7 +6,6 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Cpu } from "lucide-react";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
-import { PushDialog } from "@/components/chat/PushDialog";
 
 interface Changes {
   files: string[];
@@ -146,11 +145,6 @@ export function MessageBubble({
   onRetryFileChange,
 }: MessageBubbleProps) {
   const isUser = role === "user";
-  const [showPushDialog, setShowPushDialog] = useState(false);
-  const fileChangeData = useQuery(
-    api.fileChanges.getByMessage,
-    !isUser && changes ? { messageId } : "skip",
-  );
 
   return (
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
@@ -228,27 +222,6 @@ export function MessageBubble({
               </div>
             </details>
 
-            {!changes.committed && fileChangeId && !fileChangeData?.reverted && (
-              <div className="mt-2">
-                <button
-                  onClick={() => setShowPushDialog(true)}
-                  className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-paper-950 transition-colors hover:bg-green-500"
-                >
-                  Approve & Push to GitHub
-                </button>
-                {showPushDialog && (
-                  <PushDialog
-                    repoId={repoId}
-                    messageId={messageId}
-                    fileChangeId={fileChangeId}
-                    files={changes.files}
-                    messageContent={content}
-                    sessionBranch={sessionBranch}
-                    onClose={() => setShowPushDialog(false)}
-                  />
-                )}
-              </div>
-            )}
 
             {changes.committed && changes.commitSha && (
               <div className="mt-2 flex justify-end">

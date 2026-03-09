@@ -16,6 +16,8 @@ export default function RepoSettingsPage() {
   const repo = useQuery(api.projects.getRepoWithTeam, { repoId });
   const updateRepo = useMutation(api.projects.updateRepo);
   const removeRepo = useMutation(api.projects.removeRepo);
+  const templateStatus = useQuery(api.particles.getTemplateStatus, { repoId });
+  const deleteTemplateMutation = useMutation(api.particles.requestDeleteTemplate);
 
   const [pushStrategy, setPushStrategy] = useState<"direct" | "pr" | null>(
     null,
@@ -35,6 +37,8 @@ export default function RepoSettingsPage() {
   const [savingEnvVars, setSavingEnvVars] = useState(false);
   const [customPrompt, setCustomPrompt] = useState<string | null>(null);
   const [savingCustomPrompt, setSavingCustomPrompt] = useState(false);
+  const [deletingSnapshot, setDeletingSnapshot] = useState(false);
+  const [showDeleteSnapshot, setShowDeleteSnapshot] = useState(false);
   const { toast } = useToast();
 
   // Initialize envVars from repo data once loaded
@@ -591,6 +595,48 @@ export default function RepoSettingsPage() {
         </div>
       )}
 
+      {/* Environment Snapshot - only for owners */}
+      {isOwner && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-paper-800">
+            Environment Snapshot
+          </h2>
+          <p className="mt-1 text-sm text-paper-500">
+            Snapshots are created automatically when a session starts for the first time.
+            Future sessions duplicate from the snapshot instead of building from scratch.
+          </p>
+          <div className="mt-3 overflow-hidden rounded-lg border border-paper-300 bg-paper-200">
+            <div className="p-4">
+              {templateStatus ? (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <span className="text-sm font-medium text-paper-800">
+                      Snapshot available
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-paper-500">
+                    Created {new Date(templateStatus.createdAt).toLocaleString()}
+                  </p>
+                  <div className="mt-4">
+                    <button
+                      onClick={() => setShowDeleteSnapshot(true)}
+                      className="rounded-md border border-red-800 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-900/30"
+                    >
+                      Delete Snapshot
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-paper-500">
+                  No snapshot available. One will be created automatically when the next session starts.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Danger zone - only for owners */}
       {isOwner && (
         <div className="mt-8">
@@ -636,6 +682,31 @@ export default function RepoSettingsPage() {
         confirmLabel="Disconnect"
         variant="danger"
         loading={disconnectingConvex}
+      />
+
+      <ConfirmDialog
+        open={showDeleteSnapshot}
+        onClose={() => setShowDeleteSnapshot(false)}
+        onConfirm={async () => {
+          setDeletingSnapshot(true);
+          try {
+            await deleteTemplateMutation({ repoId });
+            toast({ type: "success", message: "Snapshot deleted" });
+          } catch (err) {
+            toast({
+              type: "error",
+              message: err instanceof Error ? err.message : "Failed to delete snapshot",
+            });
+          } finally {
+            setDeletingSnapshot(false);
+            setShowDeleteSnapshot(false);
+          }
+        }}
+        title="Delete Environment Snapshot?"
+        description="Are you sure you want to delete the environment snapshot? A new snapshot will be created automatically when the next session starts."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deletingSnapshot}
       />
     </div>
   );

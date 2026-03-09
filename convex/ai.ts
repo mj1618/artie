@@ -1393,7 +1393,7 @@ export const generateResponseViaCli = action({
         if (!anthropicApiKey) {
           throw new Error("No Anthropic API key configured for this team");
         }
-        const launchCmd = `ANTHROPIC_API_KEY=${anthropicApiKey} claude -p --dangerously-skip-permissions --output-format stream-json --verbose --model ${modelName} < /tmp/claude-prompt.txt > /tmp/claude-output.jsonl 2>&1 & echo $!`;
+        const launchCmd = `ANTHROPIC_API_KEY=${anthropicApiKey} IS_SANDBOX=1 claude -p --dangerously-skip-permissions --output-format stream-json --verbose --model ${modelName} < /tmp/claude-prompt.txt > /tmp/claude-output.jsonl 2>&1 & echo $!`;
 
         const launchResult = await execCommandInRuntime(runtimeInfo, launchCmd, 30000);
         const pid = launchResult.output.trim();

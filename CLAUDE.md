@@ -1,12 +1,9 @@
-
 # local dev user
 
 Use this to sign in as an owner with some projects setup for testing:
 
 user: matthew.stephen.james@gmail.com
 pass: xt4yArXEXhDjng8R9T7QTpjL8j&@
-
-
 
 # use @/ for paths
 
@@ -25,7 +22,7 @@ Don't disable typecheck.
 Use `npx tsc --noEmit` to run a typecheck of the Next.js app.
 Fix any typescript errors including ones that weren't yours.
 
-Use `npm run dev` - which will build properly for production and start a `node server.js` process. Note this does NOT watch files, you'll need to kill and restart in order to see any changes.
+Use `npm run dev` to run the next dev server.
 
 # Types
 
